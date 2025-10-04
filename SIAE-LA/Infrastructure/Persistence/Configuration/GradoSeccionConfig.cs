@@ -4,10 +4,10 @@ using SIAE_LA.Domain.Entities;
 
 namespace SIAE_LA.Infrastructure.Persistence.Configurations;
 
-public class EstudianteConfig : IEntityTypeConfiguration<Estudiante>
+public class GradoSeccionConfig : IEntityTypeConfiguration<GradoSeccion>
 {
-    public void Configure(EntityTypeBuilder<Estudiante> b)
+    public void Configure(EntityTypeBuilder<GradoSeccion> b)
     {
-        b.HasIndex(x => x.CodigoUnico).IsUnique();
+        b.ToTable("GRADO_SECCION");
     }
 }

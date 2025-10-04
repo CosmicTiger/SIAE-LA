@@ -4,10 +4,10 @@ using SIAE_LA.Domain.Entities;
 
 namespace SIAE_LA.Infrastructure.Persistence.Configurations;
 
-public class AsignaturaConfig : IEntityTypeConfiguration<Asignatura>
+public class ApoderadoConfig : IEntityTypeConfiguration<Apoderado>
 {
-    public void Configure(EntityTypeBuilder<Asignatura> b)
+    public void Configure(EntityTypeBuilder<Apoderado> b)
     {
-        b.HasIndex(x => x.Codigo).IsUnique();
+        b.ToTable("APODERADO");
     }
 }

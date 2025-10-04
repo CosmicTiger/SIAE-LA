@@ -4,7 +4,10 @@ using SIAE_LA.Domain.Entities;
 
 namespace SIAE_LA.Infrastructure.Persistence.Configurations;
 
-public class EventoCalendarioConfig : IEntityTypeConfiguration<EventoCalendario>
+public class AlumnoConfig : IEntityTypeConfiguration<Alumno>
 {
-    public void Configure(EntityTypeBuilder<EventoCalendario> b) { }
+    public void Configure(EntityTypeBuilder<Alumno> b)
+    {
+        b.ToTable("ALUMNO");
+    }
 }

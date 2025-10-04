@@ -3,16 +3,25 @@
 public class Matricula
 {
     public int Id { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(30)] public string? ValorCodigo { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(30)] public string? Codigo { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(40)] public string? Situacion { get; set; } // Regular/Repite
 
-    public int EstudianteId { get; set; }
-    public Estudiante Estudiante { get; set; } = default!;
+    public int AlumnoId { get; set; }
+    public Alumno Alumno { get; set; } = default!;
 
-    public int GrupoId { get; set; }
-    public Grupo Grupo { get; set; } = default!
+    public int NivelDetalleId { get; set; }
+    public NivelDetalle NivelDetalle { get; set; } = default!;
 
-;
+    public int? ApoderadoId { get; set; }
+    public Apoderado? Apoderado { get; set; }
+
+    [System.ComponentModel.DataAnnotations.MaxLength(120)] public string? InstitucionProcedencia { get; set; }
+    public bool? EsRepetente { get; set; }
+
     public int PeriodoId { get; set; }
     public Periodo Periodo { get; set; } = default!;
 
-    public DateTime Fecha { get; set; } = DateTime.UtcNow;
+    public bool Activo { get; set; } = true;
+    public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
 }

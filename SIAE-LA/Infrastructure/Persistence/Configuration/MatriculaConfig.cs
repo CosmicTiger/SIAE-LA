@@ -8,17 +8,24 @@ public class MatriculaConfig : IEntityTypeConfiguration<Matricula>
 {
     public void Configure(EntityTypeBuilder<Matricula> b)
     {
-        b.HasIndex(x => new { x.EstudianteId, x.GrupoId, x.PeriodoId }).IsUnique();
+        b.ToTable("MATRICULA");
 
-        b.HasOne(x => x.Estudiante)
-         .WithMany(e => e.Matriculas)
-         .HasForeignKey(x => x.EstudianteId)
+        b.HasIndex(x => new { x.AlumnoId, x.NivelDetalleId, x.PeriodoId }).IsUnique();
+
+        b.HasOne(x => x.Alumno)
+         .WithMany(a => a.Matriculas)
+         .HasForeignKey(x => x.AlumnoId)
          .OnDelete(DeleteBehavior.Restrict);
 
-        b.HasOne(x => x.Grupo)
-         .WithMany(g => g.Matriculas)
-         .HasForeignKey(x => x.GrupoId)
+        b.HasOne(x => x.NivelDetalle)
+         .WithMany(nd => nd.Matriculas)
+         .HasForeignKey(x => x.NivelDetalleId)
          .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasOne(x => x.Apoderado)
+         .WithMany(a => a.Matriculas)
+         .HasForeignKey(x => x.ApoderadoId)
+         .OnDelete(DeleteBehavior.SetNull);
 
         b.HasOne(x => x.Periodo)
          .WithMany()

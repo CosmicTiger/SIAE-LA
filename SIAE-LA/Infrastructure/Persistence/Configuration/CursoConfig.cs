@@ -4,10 +4,11 @@ using SIAE_LA.Domain.Entities;
 
 namespace SIAE_LA.Infrastructure.Persistence.Configurations;
 
-public class NivelConfig : IEntityTypeConfiguration<Nivel>
+public class CursoConfig : IEntityTypeConfiguration<Curso>
 {
-    public void Configure(EntityTypeBuilder<Nivel> b)
+    public void Configure(EntityTypeBuilder<Curso> b)
     {
-        b.ToTable("NIVEL");
+        b.ToTable("CURSO");
+        b.HasIndex(x => x.Codigo).IsUnique(false);
     }
 }

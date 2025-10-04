@@ -6,5 +6,8 @@ namespace SIAE_LA.Infrastructure.Persistence.Configurations;
 
 public class PeriodoConfig : IEntityTypeConfiguration<Periodo>
 {
-    public void Configure(EntityTypeBuilder<Periodo> b) { }
+    public void Configure(EntityTypeBuilder<Periodo> b)
+    {
+        b.ToTable("PERIODO");
+    }
 }

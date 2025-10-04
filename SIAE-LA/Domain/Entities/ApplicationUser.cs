@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 
@@ -15,6 +15,15 @@ namespace SIAE_LA.Domain.Entities
         [Required]
         [StringLength(150)]
         public string FullName { get; set; } = string.Empty;
+
+        // Aprobaciones
+        public bool IsApproved { get; set; } = false;
+        public string? ApprovedByUserId { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+
+        // Vínculo a Persona (requerido para roles ≠ Admin)
+        public int? PersonaId { get; set; }
+        public Persona? Persona { get; set; }
 
         /// <summary>
         /// Returns a display string for the user's roles.

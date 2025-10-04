@@ -6,5 +6,8 @@ namespace SIAE_LA.Infrastructure.Persistence.Configurations;
 
 public class DocenteConfig : IEntityTypeConfiguration<Docente>
 {
-    public void Configure(EntityTypeBuilder<Docente> b) { }
+    public void Configure(EntityTypeBuilder<Docente> b)
+    {
+        b.ToTable("DOCENTE");
+    }
 }
