@@ -57,4 +57,14 @@ namespace SIAE_LA.DTOs
         public int? TotalVacantes { get; set; }
         public int? VacantesOcupadas { get; set; }
     }
+
+    // NivelDetalleCurso DTOs (asignación de cursos a nivelDetalle)
+    public class NivelDetalleCursoCreateDto
+    {
+        [Required] public int NivelDetalleId { get; set; }
+        [Required] public int CursoId { get; set; }
+        public bool Activo { get; set; } = true;
+    }
+
+    public record NivelDetalleCursoReadDto(int Id, int NivelDetalleId, int CursoId, bool Activo, DateTime FechaRegistro);
 }

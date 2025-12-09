@@ -87,5 +87,68 @@ namespace SIAE_LA.Controllers
             var list = await q.Distinct().ToListAsync();
             return Ok(ApiResponse<IEnumerable<GradoSeccionDto>>.Success(list));
         }
+
+        /// <summary>
+        /// Asignar un curso a un nivelDetalle (crear NivelDetalleCurso)
+        /// Roles: Admin, Direccion, Subdireccion, JefeArea
+        /// </summary>
+        [HttpPost("{nivelId:int}/cursos")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
+        public async Task<ActionResult<ApiResponse<NivelDetalleCursoReadDto>>> AddCursoToNivel(int nivelId, [FromBody] NivelDetalleCursoCreateDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ApiResponse<NivelDetalleCursoReadDto>.Fail(SIAE_LA.Utils.ModelStateHelper.BuildErrors(ModelState)));
+
+            // Validar nivelDetalle existe y pertenece al nivelId
+            var nivelDetalle = await _db.NivelesDetalle.FindAsync(dto.NivelDetalleId);
+            if (nivelDetalle is null) return NotFound(ApiResponse<NivelDetalleCursoReadDto>.Fail("NivelDetalle no encontrado"));
+            if (nivelDetalle.NivelId != nivelId) return BadRequest(ApiResponse<NivelDetalleCursoReadDto>.Fail("NivelDetalle no pertenece al nivel especificado"));
+
+            // Validar curso existe
+            var curso = await _db.Cursos.FindAsync(dto.CursoId);
+            if (curso is null) return NotFound(ApiResponse<NivelDetalleCursoReadDto>.Fail("Curso no encontrado"));
+
+            // Evitar duplicados: nivelDetalle + curso
+            var exists = await _db.NivelesDetalleCurso.AnyAsync(ndc => ndc.NivelDetalleId == dto.NivelDetalleId && ndc.CursoId == dto.CursoId);
+            if (exists) return Conflict(ApiResponse<NivelDetalleCursoReadDto>.Fail("El curso ya está asignado a este nivelDetalle"));
+
+            var ndc = new Domain.Entities.NivelDetalleCurso
+            {
+                NivelDetalleId = dto.NivelDetalleId,
+                CursoId = dto.CursoId,
+                Activo = dto.Activo
+            };
+            _db.NivelesDetalleCurso.Add(ndc);
+            await _db.SaveChangesAsync();
+
+            var read = new NivelDetalleCursoReadDto(ndc.Id, ndc.NivelDetalleId, ndc.CursoId, ndc.Activo, ndc.FechaRegistro);
+            return CreatedAtAction(nameof(GetNivelDetalleCurso), new { id = ndc.Id }, ApiResponse<NivelDetalleCursoReadDto>.Success(read, "Curso asignado al nivel"));
+        }
+
+        /// <summary>
+        /// Obtener una asignación NivelDetalleCurso por id
+        /// </summary>
+        [HttpGet("cursos/{id:int}")]
+        public async Task<ActionResult<ApiResponse<NivelDetalleCursoReadDto>>> GetNivelDetalleCurso(int id)
+        {
+            var ndc = await _db.NivelesDetalleCurso.FindAsync(id);
+            if (ndc is null) return NotFound(ApiResponse<NivelDetalleCursoReadDto>.Fail("NivelDetalleCurso no encontrado"));
+            var read = new NivelDetalleCursoReadDto(ndc.Id, ndc.NivelDetalleId, ndc.CursoId, ndc.Activo, ndc.FechaRegistro);
+            return Ok(ApiResponse<NivelDetalleCursoReadDto>.Success(read));
+        }
+
+        /// <summary>
+        /// Desasignar (soft-delete) un curso de un nivelDetalle
+        /// Roles: Admin, Direccion, Subdireccion, JefeArea
+        /// </summary>
+        [HttpDelete("cursos/{id:int}")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
+        public async Task<ActionResult<ApiResponse<string>>> RemoveNivelDetalleCurso(int id)
+        {
+            var ndc = await _db.NivelesDetalleCurso.FindAsync(id);
+            if (ndc is null) return NotFound(ApiResponse<string>.Fail("Asignación no encontrada"));
+            ndc.Activo = false;
+            await _db.SaveChangesAsync();
+            return Ok(ApiResponse<string>.Success("OK", "Asignación desactivada"));
+        }
     }
 }
