@@ -23,7 +23,136 @@ namespace SIAE_LA.Controllers
             _db = db;
             _userManager = userManager;
         }
-        
+
+        [HttpGet]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
+        public async Task<ActionResult<ApiResponse<PaginationResult<DocenteReadDto>>>> GetAll(
+            [FromQuery] QueryParams q,
+            [FromQuery] string? name = null,
+            [FromQuery] string? email = null,
+            [FromQuery] string? phone = null,
+            [FromQuery] string? list = "ACTIVE",
+            [FromQuery] string? sortBy = "apellido",
+            [FromQuery] string? sortDir = "asc"
+        ) {
+            // Normalizamos parámetros
+            var listMode = (list ?? "ACTIVE").Trim().ToUpperInvariant();
+            var sort = (sortBy ?? "apellido").Trim().ToLowerInvariant();
+            var dir = (sortDir ?? "asc").Trim().ToLowerInvariant();
+            if (dir != "asc" && dir != "desc") dir = "asc";
+
+            // Base query (desde Alumnos con Persona)
+            var query = _db.Docentes.AsNoTracking().Include(d => d.Persona).AsQueryable();
+
+            // Filtrar por activos por defectos
+            if (listMode != "ALL")
+            {
+                query = query.Where(d => d.Activo);
+            }
+
+            // Aplicar filtros de búsqueda específicos (si se pasan)
+            if (!string.IsNullOrWhiteSpace(q.Search))
+            {
+                var s = q.Search.Trim();
+                // mezcla de criterios: nombre/apellido o documento
+                query = query.Where(d =>
+                    EF.Functions.Like(d.Persona.Nombres + " " + d.Persona.Apellidos, $"%{s}%") ||
+                    EF.Functions.Like(d.Persona.Apellidos + " " + d.Persona.Nombres, $"%{s}%") ||
+                    EF.Functions.Like(d.Persona.DocumentoIdentidad ?? "", $"%{s}%") ||
+                    EF.Functions.Like(d.Persona.Email ?? "", $"%{s}%")
+                );
+            }
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                var s = name.Trim();
+                query = query.Where(d => 
+                    EF.Functions.Like(d.Persona.Nombres + " " + d.Persona.Apellidos, $"%{s}%") ||
+                    EF.Functions.Like(d.Persona.Apellidos + " " + d.Persona.Nombres, $"%{s}%")
+                );
+            }
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                var s = email.Trim();
+                query = query.Where(a => EF.Functions.Like(a.Persona.Email ?? "", $"%{s}%"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(phone))
+            {
+                var s = phone.Trim();
+                query = query.Where(a =>
+                    EF.Functions.Like(a.Persona.NumeroTelefono ?? "", $"%{s}%")
+                );
+            }
+
+            // Contar total antes de paginar
+            var total = await query.CountAsync();
+
+            var withLatest = query.Select(d => new
+            {
+                Docente = d,
+            });
+
+            // Aplicar ordenamiento
+            switch (sort)
+            {
+                case "created":
+                    if (dir == "desc")
+                        withLatest = withLatest.OrderByDescending(x => x.Docente.FechaRegistro);
+                    else
+                        withLatest = withLatest.OrderBy(x => x.Docente.FechaRegistro);
+                    break;
+
+                case "email":
+                    if (dir == "desc")
+                        withLatest = withLatest.OrderByDescending(x => x.Docente.Persona.Email);
+                    else
+                        withLatest = withLatest.OrderBy(x => x.Docente.Persona.Email);
+                    break;
+
+                case "apellido":
+                default:
+                    if (dir == "desc")
+                        withLatest = withLatest.OrderByDescending(x => x.Docente.Persona.Apellidos)
+                            .ThenByDescending(x => x.Docente.Persona.Nombres);
+                    else
+                        withLatest = withLatest.OrderBy(x => x.Docente.Persona.Apellidos)
+                            .ThenBy(x => x.Docente.Persona.Nombres);
+                    break;
+            }
+
+            // Paginación
+            var page = Math.Max(1, q.Page);
+            var pageSize = Math.Max(1, q.PageSize);
+            var skip = (page - 1) * pageSize;
+
+            var listedItems = await withLatest
+                .Skip(skip)
+                .Take(pageSize)
+                .Select(x => new DocenteReadDto(
+                    x.Docente.Id,
+                    x.Docente.Persona.Nombres,
+                    x.Docente.Persona.Apellidos,
+                    /* Codigo */ null,
+                    x.Docente.Persona.DocumentoIdentidad,
+                    x.Docente.Persona.Ciudad,
+                    x.Docente.Persona.Direccion,
+                    x.Docente.Activo
+                ))
+                .ToListAsync();
+
+            var result = new PaginationResult<DocenteReadDto>
+            {
+                Page = q.Page,
+                PageSize = q.PageSize,
+                TotalItems = total,
+                Items = listedItems
+            };
+
+            return Ok(ApiResponse<PaginationResult<DocenteReadDto>>.Success(result));
+        }
+
         // ======================================================
         // GET: api/docentes/{id}
         // ======================================================
@@ -89,7 +218,7 @@ namespace SIAE_LA.Controllers
                     Nombres = req.DocentePersona.Nombres,
                     Apellidos = req.DocentePersona.Apellidos,
                     DocumentoIdentidad = docDocente,
-                    FechaNacimiento = req.DocentePersona.FechaNacimiento,
+                FechaNacimiento = req.DocentePersona.FechaNacimiento.HasValue ? req.DocentePersona.FechaNacimiento.Value : (DateTime?)null,
                     Sexo = req.DocentePersona.Sexo,
                     Ciudad = req.DocentePersona.Ciudad,
                     Direccion = req.DocentePersona.Direccion,

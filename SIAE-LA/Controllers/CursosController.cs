@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿#nullable enable
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SIAE_LA.Abstractions;
 using SIAE_LA.DTOs;
@@ -8,11 +11,11 @@ namespace SIAE_LA.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public sealed class CursosController : Controller
     {
         private readonly ApplicationDbContext _db;
         public CursosController(ApplicationDbContext db) => _db = db;
-
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<PaginationResult<CursoReadDto>>>> GetAll([FromQuery] QueryParams q)
@@ -41,7 +44,6 @@ namespace SIAE_LA.Controllers
             return CreatedAtAction(nameof(GetAll), new { id = e.Id }, ApiResponse<CursoReadDto>.Success(read, "Curso creado"));
         }
 
-
         [HttpPut("{id:int}")]
         public async Task<ActionResult<ApiResponse<CursoReadDto>>> Update(int id, [FromBody] CursoUpdateDto dto)
         {
@@ -51,7 +53,6 @@ namespace SIAE_LA.Controllers
             await _db.SaveChangesAsync();
             return Ok(ApiResponse<CursoReadDto>.Success(new(e.Id, e.Descripcion, e.Codigo, e.Activo), "Curso actualizado"));
         }
-
 
         [HttpDelete("{id:int}")]
         public async Task<ActionResult<ApiResponse<string>>> Delete(int id)

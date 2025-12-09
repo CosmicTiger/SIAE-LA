@@ -12,4 +12,7 @@ public class Alumno
 
     public ICollection<Matricula> Matriculas { get; set; } = new List<Matricula>();
     public ICollection<Calificacion> Calificaciones { get; set; } = new List<Calificacion>();
+
+    // Historial y asignaciones vigentes de tutores/apoderados
+    public ICollection<AlumnoApoderado> Apoderados { get; set; } = new List<AlumnoApoderado>();
 }

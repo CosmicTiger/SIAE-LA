@@ -8,6 +8,11 @@ public class GradoSeccionConfig : IEntityTypeConfiguration<GradoSeccion>
 {
     public void Configure(EntityTypeBuilder<GradoSeccion> b)
     {
-        b.ToTable("GRADO_SECCION");
+        b.ToTable("grado_seccion");
+        b.Property(x => x.Id).HasColumnName("grado_seccion_id");
+        b.Property(x => x.DescripcionGrado).HasColumnName("descripcion_grado").HasMaxLength(50).IsRequired();
+        b.Property(x => x.DescripcionSeccion).HasColumnName("descripcion_seccion").HasMaxLength(50).IsRequired();
+        b.Property(x => x.Activo).HasColumnName("activo").IsRequired();
+        b.Property(x => x.FechaRegistro).HasColumnName("fecha_registro").IsRequired();
     }
 }

@@ -6,4 +6,14 @@
         public string Password { get; set; } = default!;
         public string? TipoParentesco { get; set; }      // Madre, Padre, Tutor legal…
     }
+
+    public sealed record TutorDto(
+            int ApoderadoId,
+            int PersonaId,
+            string Nombres,
+            string Apellidos,
+            string? DocumentoIdentidad,
+            string? Email,
+            string? NumeroTelefono
+        );
 }

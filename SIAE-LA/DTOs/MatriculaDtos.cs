@@ -1,19 +1,66 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿#nullable enable
+using System.ComponentModel.DataAnnotations;
 
 namespace SIAE_LA.DTOs
 {
     public record MatriculaReadDto(
-    int Id,
-    int AlumnoId,
-    int NivelDetalleId,
-    int PeriodoId,
-    int? ApoderadoId,
-    string? Situacion,
-    string? InstitucionProcedencia,
-    bool? EsRepetente,
-    DateTime FechaRegistro
+        int Id,
+        int AlumnoId,
+        int NivelDetalleId,
+        int PeriodoId,
+        int? ApoderadoId,
+        string? Situacion,
+        string? InstitucionProcedencia,
+        bool? EsRepitente,
+        DateTime FechaRegistro
     );
 
+    // Nueva estructura: incluir detalle del NivelDetalle con Nivel y GradoSeccion
+    public record GradoSeccionDto(int Id, string DescripcionGrado, string DescripcionSeccion);
+
+    public record NivelDto(int Id, string DescripcionNivel, string? DescripcionTurno, string? Horario);
+
+    public record NivelDetalleDto(
+        int Id,
+        int NivelId,
+        NivelDto Nivel,
+        int GradoSeccionId,
+        GradoSeccionDto GradoSeccion,
+        int? TotalVacantes,
+        int? VacantesOcupadas
+    );
+
+    public sealed record NivelResumenDto(
+            int NivelDetalleId,
+            int NivelId,
+            string NivelDescripcion,
+            string? NivelTurno,
+            int GradoSeccionId,
+            string GradoDescripcion,
+            string SeccionDescripcion
+        );
+
+    public record MatriculaWithDetalleDto(
+        int Id,
+        AlumnoReadDto alumno,
+        NivelDetalleDto NivelDetalle,
+        int PeriodoId,
+        int? ApoderadoId,
+        string? Situacion,
+        string? InstitucionProcedencia,
+        bool? EsRepetente,
+        DateTime FechaRegistro
+    );
+
+    public sealed record MatriculaResumenDto(
+            int MatriculaId,
+            NivelResumenDto? Nivel,
+            int PeriodoId,
+            string? Situacion,
+            bool? EsRepetente,
+            int? ApoderadoId,
+            DateTime FechaRegistro
+        );
 
     public class MatriculaCreateDto
     {
@@ -23,6 +70,6 @@ namespace SIAE_LA.DTOs
         public int? ApoderadoId { get; set; }
         [MaxLength(40)] public string? Situacion { get; set; }
         [MaxLength(120)] public string? InstitucionProcedencia { get; set; }
-        public bool? EsRepetente { get; set; }
+        public bool? EsRepitente { get; set; }
     }
 }

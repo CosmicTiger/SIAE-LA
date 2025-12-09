@@ -16,4 +16,16 @@ namespace SIAE_LA.DTOs
         public string? Direccion { get; set; }
         public string? NumeroTelefono { get; set; }   // se normaliza a +505######## si existe
     }
+
+    public sealed record PersonaDto(
+            string Nombres,
+            string Apellidos,
+            string? DocumentoIdentidad,
+            DateTime? FechaNacimiento,
+            string? Sexo,
+            string? Ciudad,
+            string? Direccion,
+            string? Email,
+            string? NumeroTelefono
+        );
 }

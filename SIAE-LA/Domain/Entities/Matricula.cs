@@ -17,7 +17,7 @@ public class Matricula
     public Apoderado? Apoderado { get; set; }
 
     [System.ComponentModel.DataAnnotations.MaxLength(120)] public string? InstitucionProcedencia { get; set; }
-    public bool? EsRepetente { get; set; }
+    public bool? EsRepitente { get; set; }
 
     public int PeriodoId { get; set; }
     public Periodo Periodo { get; set; } = default!;

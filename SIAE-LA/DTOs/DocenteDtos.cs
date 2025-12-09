@@ -1,14 +1,16 @@
+using SIAE_LA.Domain.Entities;
+
 namespace SIAE_LA.DTOs
 {
     public record DocenteReadDto(
-        int Id,
-        string Nombres,
-        string Apellidos,
-        string? Codigo,
-        string? DocumentoIdentidad,
-        string? Ciudad,
-        string? Direccion,
-        bool Activo
+    int Id,
+    string Nombres,
+    string Apellidos,
+    string? Codigo,
+    string? DocumentoIdentidad,
+    string? Ciudad,
+    string? Direccion,
+    bool Activo
     );
 
     public sealed class DocenteCreateWithAccountsDto

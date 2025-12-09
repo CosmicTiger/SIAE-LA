@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIAE_LA.Domain.Entities
 {
@@ -24,6 +25,8 @@ namespace SIAE_LA.Domain.Entities
         // Vínculo a Persona (requerido para roles ≠ Admin)
         public int? PersonaId { get; set; }
         public Persona? Persona { get; set; }
+        [NotMapped]
+        public DateTime? RegisteredAt { get; internal set; }
 
         /// <summary>
         /// Returns a display string for the user's roles.

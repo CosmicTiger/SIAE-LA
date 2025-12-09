@@ -1,5 +1,6 @@
-﻿// AlumnosController.cs
+﻿#nullable enable
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ namespace SIAE_LA.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public sealed class AlumnosController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
@@ -33,77 +35,380 @@ namespace SIAE_LA.Controllers
         }
 
         // ======================================================================
-        // GET: api/alumnos  (paginado + búsqueda por nombre/apellido/doc)
+        // GET: api/alumnos  (paginado + búsqueda avanzada + filtros + ordenamiento)
+        //
+        // Query parameters supported:
+        //  - q.Search (desde QueryParams) --> texto genérico
+        //  - name         : búsqueda por nombre del alumno (partial)
+        //  - tutor        : búsqueda por nombre del tutor (partial)
+        //  - doc          : documento identidad (exact or partial depending)
+        //  - email        : email (partial)
+        //  - phone        : teléfono (partial)
+        //  - gradoId      : int -> filtrar por Grado/Sección (GradoSeccion.Id)
+        //  - list         : "ACTIVE" (default) | "ALL" (incluye inactivos)
+        //  - sortBy       : "grado" | "created" | "apellido" | "email" | "matricula"  (default: "apellido")
+        //  - sortDir      : "asc" | "desc" (default: "asc")
         // ======================================================================
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<PaginationResult<AlumnoReadDto>>>> GetAll([FromQuery] QueryParams q)
+        public async Task<ActionResult<ApiResponse<PaginationResult<AlumnoReadDto>>>> GetAll(
+            [FromQuery] QueryParams q,
+            [FromQuery] string? name = null,
+            [FromQuery] string? tutor = null,
+            [FromQuery] string? doc = null,
+            [FromQuery] string? email = null,
+            [FromQuery] string? phone = null,
+            [FromQuery] int? gradoId = null,
+            [FromQuery] string? list = "ACTIVE",
+            [FromQuery] string? sortBy = "apellido",
+            [FromQuery] string? sortDir = "asc")
         {
-            // Ahora todo se toma desde Persona
+            // Normalizar parámetros
+            var listMode = (list ?? "ACTIVE").Trim().ToUpperInvariant();
+            var sort = (sortBy ?? "apellido").Trim().ToLowerInvariant();
+            var dir = (sortDir ?? "asc").Trim().ToLowerInvariant();
+            if (dir != "asc" && dir != "desc") dir = "asc";
+
+            // Base query (desde Alumnos con Persona)
             var query = _db.Alumnos
                 .AsNoTracking()
                 .Include(a => a.Persona)
                 .AsQueryable();
 
+            // Filtrar por activos por defecto
+            if (listMode != "ALL")
+            {
+                query = query.Where(a => a.Activo);
+            }
+
+            // Aplicar filtros de búsqueda específicos (si se pasan)
             if (!string.IsNullOrWhiteSpace(q.Search))
             {
                 var s = q.Search.Trim();
+                // mezcla de criterios: nombre/apellido o documento
                 query = query.Where(a =>
-                    (a.Persona.Nombres + " " + a.Persona.Apellidos).Contains(s) ||
-                    (a.Persona.DocumentoIdentidad ?? "").Contains(s));
+                    EF.Functions.Like(a.Persona.Nombres + " " + a.Persona.Apellidos, $"%{s}%") ||
+                    EF.Functions.Like(a.Persona.Apellidos + " " + a.Persona.Nombres, $"%{s}%") ||
+                    EF.Functions.Like(a.Persona.DocumentoIdentidad ?? "", $"%{s}%") ||
+                    EF.Functions.Like(a.Persona.Email ?? "", $"%{s}%"));
             }
 
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                var s = name.Trim();
+                query = query.Where(a =>
+                    EF.Functions.Like(a.Persona.Nombres + " " + a.Persona.Apellidos, $"%{s}%") ||
+                    EF.Functions.Like(a.Persona.Apellidos + " " + a.Persona.Nombres, $"%{s}%"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(tutor))
+            {
+                var s = tutor.Trim();
+                // Buscar por cualquiera de las matrículas donde exista apoderado con persona coincidente
+                query = query.Where(a =>
+                    a.Matriculas.Any(m =>
+                        m.Apoderado != null &&
+                        EF.Functions.Like(m.Apoderado.Persona.Nombres + " " + m.Apoderado.Persona.Apellidos, $"%{s}%")));
+            }
+
+            if (!string.IsNullOrWhiteSpace(doc))
+            {
+                var s = doc.Trim();
+                // Por documento hacemos igualdad si tiene guión largo (formato), si no usamos contains
+                if (s.Contains("-"))
+                    query = query.Where(a => a.Persona.DocumentoIdentidad == s);
+                else
+                    query = query.Where(a => EF.Functions.Like(a.Persona.DocumentoIdentidad ?? "", $"%{s}%"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                var s = email.Trim();
+                query = query.Where(a => EF.Functions.Like(a.Persona.Email ?? "", $"%{s}%"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(phone))
+            {
+                var s = phone.Trim();
+                query = query.Where(a =>
+                    EF.Functions.Like(a.Persona.NumeroTelefono ?? "", $"%{s}%") ||
+                    // también buscar en teléfono de apoderado
+                    a.Matriculas.Any(m => m.Apoderado != null && EF.Functions.Like(m.Apoderado.Persona.NumeroTelefono ?? "", $"%{s}%"))
+                );
+            }
+
+            if (gradoId.HasValue)
+            {
+                var gid = gradoId.Value;
+                // Filtrar si alguna matrícula del alumno corresponde a ese GradoSeccion
+                query = query.Where(a => a.Matriculas.Any(m => m.NivelDetalle.GradoSeccionId == gid));
+            }
+
+            // Contar total antes de paginar
             var total = await query.CountAsync();
 
-            var items = await query
-                .OrderBy(a => a.Persona.Apellidos).ThenBy(a => a.Persona.Nombres)
-                .Skip(q.Skip).Take(q.Take)
-                .Select(a => new AlumnoReadDto(
-                    a.Id,
-                    a.Persona.Nombres,
-                    a.Persona.Apellidos,
-                    /* Codigo */ null, // ← si Persona no tiene "Codigo", enviamos null
-                    a.Persona.DocumentoIdentidad,
-                    a.Persona.Ciudad,
-                    a.Persona.Direccion,
-                    a.Activo))
+            // Para ordenar por valores relacionados (grado, matrícula), proyectamos LatestMat dentro del query
+            var withLatest = query.Select(a => new
+            {
+                Alumno = a,
+                LatestMat = a.Matriculas.OrderByDescending(m => m.FechaRegistro).FirstOrDefault()
+            });
+
+            // Aplicar ordenamiento
+            switch (sort)
+            {
+                case "grado":
+                    if (dir == "desc")
+                        withLatest = withLatest
+                            .OrderByDescending(x => x.LatestMat != null ? x.LatestMat.NivelDetalle.Nivel.DescripcionNivel : null)
+                            .ThenByDescending(x => x.LatestMat != null ? x.LatestMat.NivelDetalle.GradoSeccion.DescripcionGrado : null)
+                            .ThenByDescending(x => x.Alumno.Persona.Apellidos).ThenByDescending(x => x.Alumno.Persona.Nombres);
+                    else
+                        withLatest = withLatest
+                            .OrderBy(x => x.LatestMat != null ? x.LatestMat.NivelDetalle.Nivel.DescripcionNivel : null)
+                            .ThenBy(x => x.LatestMat != null ? x.LatestMat.NivelDetalle.GradoSeccion.DescripcionGrado : null)
+                            .ThenBy(x => x.Alumno.Persona.Apellidos).ThenBy(x => x.Alumno.Persona.Nombres);
+                    break;
+
+                case "created":
+                    // Ordenar por fecha de creación del alumno (campo FechaRegistro en ALUMNO)
+                    if (dir == "desc")
+                        withLatest = withLatest.OrderByDescending(x => x.Alumno.FechaRegistro);
+                    else
+                        withLatest = withLatest.OrderBy(x => x.Alumno.FechaRegistro);
+                    break;
+
+                case "email":
+                    if (dir == "desc")
+                        withLatest = withLatest.OrderByDescending(x => x.Alumno.Persona.Email).ThenByDescending(x => x.Alumno.Persona.Apellidos);
+                    else
+                        withLatest = withLatest.OrderBy(x => x.Alumno.Persona.Email).ThenBy(x => x.Alumno.Persona.Apellidos);
+                    break;
+
+                case "matricula":
+                    // Ordenar por fecha de matrícula más reciente
+                    if (dir == "desc")
+                        withLatest = withLatest.OrderByDescending(x => x.LatestMat != null ? x.LatestMat.FechaRegistro : DateTime.MinValue)
+                                               .ThenByDescending(x => x.Alumno.Persona.Apellidos);
+                    else
+                        withLatest = withLatest.OrderBy(x => x.LatestMat != null ? x.LatestMat.FechaRegistro : DateTime.MinValue)
+                                               .ThenBy(x => x.Alumno.Persona.Apellidos);
+                    break;
+
+                case "apellido":
+                default:
+                    if (dir == "desc")
+                        withLatest = withLatest.OrderByDescending(x => x.Alumno.Persona.Apellidos).ThenByDescending(x => x.Alumno.Persona.Nombres);
+                    else
+                        withLatest = withLatest.OrderBy(x => x.Alumno.Persona.Apellidos).ThenBy(x => x.Alumno.Persona.Nombres);
+                    break;
+            }
+
+            // Paginación
+            var page = Math.Max(1, q.Page);
+            var pageSize = Math.Max(1, q.PageSize);
+            var skip = (page - 1) * pageSize;
+
+            var listedItems = await withLatest
+                .Skip(skip)
+                .Take(pageSize)
+                .Select(x => new AlumnoReadDto(
+                    x.Alumno.Id,
+                    x.Alumno.Persona.Nombres,
+                    x.Alumno.Persona.Apellidos,
+                    /* Codigo */ null,
+                    x.Alumno.Persona.DocumentoIdentidad,
+                    x.Alumno.Persona.Ciudad,
+                    x.Alumno.Persona.Direccion,
+                    x.Alumno.Activo
+                ))
                 .ToListAsync();
 
-            var page = new PaginationResult<AlumnoReadDto>
+            var result = new PaginationResult<AlumnoReadDto>
             {
                 Page = q.Page,
                 PageSize = q.PageSize,
                 TotalItems = total,
-                Items = items
+                Items = listedItems
             };
 
-            return Ok(ApiResponse<PaginationResult<AlumnoReadDto>>.Success(page));
+            return Ok(ApiResponse<PaginationResult<AlumnoReadDto>>.Success(result));
         }
 
         // ======================================================================
         // GET: api/alumnos/{id}
         // ======================================================================
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<ApiResponse<AlumnoReadDto>>> GetOne(int id)
+        public async Task<ActionResult<ApiResponse<AlumnoDetailDto>>> GetOne(int id)
         {
-            var a = await _db.Alumnos
+            // Proyección en una sola consulta para evitar N+1
+            var item = await _db.Alumnos
                 .AsNoTracking()
-                .Include(x => x.Persona)
-                .FirstOrDefaultAsync(x => x.Id == id);
+                .Where(a => a.Id == id)
+                .Select(a => new
+                {
+                    AlumnoId = a.Id,
+                    a.Activo,
+                    Persona = new
+                    {
+                        a.Persona.Nombres,
+                        a.Persona.Apellidos,
+                        a.Persona.DocumentoIdentidad,
+                        // Read the raw database value as DateTime? to avoid Npgsql trying to deserialize
+                        // into System.DateOnly when the underlying column is a timestamp with time zone.
+                        FechaNacimiento = EF.Property<DateTime?>(a.Persona, "FechaNacimiento"), 
+                        a.Persona.Sexo,
+                        a.Persona.Ciudad,
+                        a.Persona.Direccion,
+                        a.Persona.Email,
+                        a.Persona.NumeroTelefono
+                    },
+                    // Matrícula "actual" = la más reciente por FechaRegistro (si existe)
+                    Matricula = a.Matriculas
+                        .OrderByDescending(m => m.FechaRegistro)
+                        .Select(m => new
+                        {
+                            MatriculaId = m.Id,
+                            m.PeriodoId,
+                            m.Situacion,
+                            m.EsRepitente,
+                            m.ApoderadoId,
+                            m.FechaRegistro,
+                            NivelDetalle = new
+                            {
+                                NivelDetalleId = m.NivelDetalle.Id,
+                                NivelId = m.NivelDetalle.NivelId,
+                                NivelDescripcion = m.NivelDetalle.Nivel.DescripcionNivel,
+                                NivelTurno = m.NivelDetalle.Nivel.DescripcionTurno,
+                                GradoSeccionId = m.NivelDetalle.GradoSeccionId,
+                                GradoDescripcion = m.NivelDetalle.GradoSeccion.DescripcionGrado,
+                                SeccionDescripcion = m.NivelDetalle.GradoSeccion.DescripcionSeccion
+                            }
+                        })
+                        .FirstOrDefault()
+                })
+                .FirstOrDefaultAsync();
 
-            if (a is null)
-                return NotFound(ApiResponse<AlumnoReadDto>.Fail("Alumno no encontrado"));
+            if (item is null)
+                return NotFound(ApiResponse<AlumnoDetailDto>.Fail("Alumno no encontrado"));
 
-            var dto = new AlumnoReadDto(
-                a.Id,
-                a.Persona.Nombres,
-                a.Persona.Apellidos,
-                /* Codigo */ null,
-                a.Persona.DocumentoIdentidad,
-                a.Persona.Ciudad,
-                a.Persona.Direccion,
-                a.Activo);
+            // item.Persona.FechaNacimiento now holds a DateTime? (raw DB value). PersonaDto expects DateTime?
+            var personaDto = new PersonaDto(
+                item.Persona.Nombres,
+                item.Persona.Apellidos,
+                item.Persona.DocumentoIdentidad,
+                item.Persona.FechaNacimiento,
+                item.Persona.Sexo,
+                item.Persona.Ciudad,
+                item.Persona.Direccion,
+                item.Persona.Email,
+                item.Persona.NumeroTelefono
+            );
 
-            return Ok(ApiResponse<AlumnoReadDto>.Success(dto));
+            MatriculaResumenDto? matriculaDto = null;
+            TutorDto? tutorDto = null;
+
+            if (item.Matricula is not null)
+            {
+                var nd = item.Matricula.NivelDetalle;
+                var nivelResumen = new NivelResumenDto(
+                    nd.NivelDetalleId,
+                    nd.NivelId,
+                    nd.NivelDescripcion,
+                    nd.NivelTurno,
+                    nd.GradoSeccionId,
+                    nd.GradoDescripcion,
+                    nd.SeccionDescripcion
+                );
+
+                matriculaDto = new MatriculaResumenDto(
+                    item.Matricula.MatriculaId,
+                    nivelResumen,
+                    item.Matricula.PeriodoId,
+                    item.Matricula.Situacion,
+                    item.Matricula.EsRepitente,
+                    item.Matricula.ApoderadoId,
+                    item.Matricula.FechaRegistro
+                );
+            }
+
+            // Load only the needed fields via projection to avoid materializing
+            // the full Persona entity (which uses DateOnly) — this prevents Npgsql
+            // attempting to read a timestamp as DateOnly.
+            var activeAssignment = await _db.AlumnosApoderados
+                .AsNoTracking()
+                .Where(x => x.AlumnoId == item.AlumnoId && x.FechaFin == null)
+                .Select(x => new
+                {
+                    ApoderadoId = x.Apoderado.Id,
+                    Persona = new
+                    {
+                        Id = x.Apoderado.Persona.Id,
+                        x.Apoderado.Persona.Nombres,
+                        x.Apoderado.Persona.Apellidos,
+                        x.Apoderado.Persona.DocumentoIdentidad,
+                        x.Apoderado.Persona.Email,
+                        x.Apoderado.Persona.NumeroTelefono
+                    }
+                })
+                .FirstOrDefaultAsync();
+
+            if (activeAssignment is not null)
+            {
+                var per = activeAssignment.Persona;
+                tutorDto = new TutorDto(
+                    activeAssignment.ApoderadoId,
+                    per.Id,
+                    per.Nombres,
+                    per.Apellidos,
+                    per.DocumentoIdentidad,
+                    per.Email,
+                    per.NumeroTelefono
+                );
+            }
+            else if (matriculaDto is not null && matriculaDto.ApoderadoId is not null)
+            {
+                // Fallback: si no hay asignación activa, usar snapshot de la matrícula (legacy)
+                var ap = await _db.Apoderados
+                    .AsNoTracking()
+                    .Where(x => x.Id == matriculaDto.ApoderadoId.Value)
+                    .Select(x => new
+                    {
+                        x.Id,
+                        x.PersonaId,
+                        Persona = new
+                        {
+                            x.Persona.Nombres,
+                            x.Persona.Apellidos,
+                            x.Persona.DocumentoIdentidad,
+                            x.Persona.Email,
+                            x.Persona.NumeroTelefono
+                        }
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (ap is not null)
+                {
+                    tutorDto = new TutorDto(
+                        ap.Id,
+                        ap.PersonaId,
+                        ap.Persona.Nombres,
+                        ap.Persona.Apellidos,
+                        ap.Persona.DocumentoIdentidad,
+                        ap.Persona.Email,
+                        ap.Persona.NumeroTelefono
+                    );
+                }
+            }
+
+            var dto = new AlumnoDetailDto(
+                item.AlumnoId,
+                personaDto,
+                matriculaDto,
+                tutorDto,
+                item.Activo
+            );
+
+            return Ok(ApiResponse<AlumnoDetailDto>.Success(dto));
         }
 
         // ======================================================================
@@ -182,7 +487,7 @@ namespace SIAE_LA.Controllers
                     Nombres = req.AlumnoPersona.Nombres,
                     Apellidos = req.AlumnoPersona.Apellidos,
                     DocumentoIdentidad = docAlumno!,                  // ← NEW
-                    FechaNacimiento = req.AlumnoPersona.FechaNacimiento,
+                    FechaNacimiento = req.AlumnoPersona.FechaNacimiento.HasValue ? req.AlumnoPersona.FechaNacimiento.Value : (DateTime?)null,
                     Sexo = req.AlumnoPersona.Sexo,
                     Ciudad = req.AlumnoPersona.Ciudad,
                     Direccion = req.AlumnoPersona.Direccion,
@@ -232,7 +537,7 @@ namespace SIAE_LA.Controllers
                         Nombres = req.Tutor.Nombres,
                         Apellidos = req.Tutor.Apellidos,
                         DocumentoIdentidad = req.Tutor.DocumentoIdentidad,
-                        FechaNacimiento = req.Tutor.FechaNacimiento,
+                        FechaNacimiento = req.Tutor.FechaNacimiento.HasValue ? req.Tutor.FechaNacimiento.Value : (DateTime?)null,
                         Sexo = req.Tutor.Sexo,
                         Ciudad = req.Tutor.Ciudad,
                         Direccion = req.Tutor.Direccion,

@@ -10,6 +10,16 @@
     string? Direccion,
     bool Activo
     );
+
+
+    public sealed record AlumnoDetailDto(
+            int AlumnoId,
+            PersonaDto Persona,
+            MatriculaResumenDto? MatriculaActual,
+            TutorDto? Tutor,
+            bool Activo
+        );
+
     public sealed class AlumnoCreateWithAccountsDto
     {
         // Persona del alumno (DEBE tener FechaNacimiento)

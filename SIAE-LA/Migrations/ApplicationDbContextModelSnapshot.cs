@@ -2,8 +2,8 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SIAE_LA.Infrastructure.Persistence;
 
 #nullable disable
@@ -17,34 +17,33 @@ namespace SIAE_LA.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.20")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("ProductVersion", "8.0.21")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
+                        .HasDatabaseName("RoleNameIndex");
 
                     b.ToTable("AspNetRoles", (string)null);
                 });
@@ -53,19 +52,19 @@ namespace SIAE_LA.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("RoleId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -78,19 +77,19 @@ namespace SIAE_LA.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -102,17 +101,17 @@ namespace SIAE_LA.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.HasKey("LoginProvider", "ProviderKey");
 
@@ -124,10 +123,10 @@ namespace SIAE_LA.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("RoleId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.HasKey("UserId", "RoleId");
 
@@ -139,16 +138,16 @@ namespace SIAE_LA.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Value")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
@@ -159,126 +158,188 @@ namespace SIAE_LA.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("alumno_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<int>("PersonaId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("persona_id");
 
                     b.HasKey("Id");
 
                     b.HasIndex("PersonaId")
                         .IsUnique();
 
-                    b.ToTable("ALUMNO", (string)null);
+                    b.ToTable("alumno", (string)null);
+                });
+
+            modelBuilder.Entity("SIAE_LA.Domain.Entities.AlumnoApoderado", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("alumno_apoderado_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AlumnoId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ApoderadoId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("EsResponsableLegal")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("es_responsable_legal");
+
+                    b.Property<DateTime?>("FechaFin")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_fin");
+
+                    b.Property<DateTime>("FechaInicio")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_inicio");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlumnoId");
+
+                    b.HasIndex("ApoderadoId");
+
+                    b.HasIndex("AlumnoId", "FechaFin")
+                        .HasDatabaseName("IX_ALUMNO_APODERADO_ALUMNO_FECHAFIN");
+
+                    b.ToTable("alumno_apoderado", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Apoderado", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("apoderado_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<string>("EstadoCivil")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text")
+                        .HasColumnName("estado_civil");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<int>("PersonaId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("persona_id");
 
                     b.Property<string>("TipoParentesco")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text")
+                        .HasColumnName("tipo_parentesco");
 
                     b.HasKey("Id");
 
                     b.HasIndex("PersonaId")
                         .IsUnique();
 
-                    b.ToTable("APODERADO", (string)null);
+                    b.ToTable("apoderado", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_aprobacion");
 
                     b.Property<string>("ApprovedByUserId")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text")
+                        .HasColumnName("aprobado_por");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("email");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("es_email_confirmado");
 
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("full_name");
 
                     b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("esta_aprobado");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text")
+                        .HasColumnName("password_hash");
 
                     b.Property<int?>("PersonaId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("persona_id");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text")
+                        .HasColumnName("telefono");
 
                     b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("es_telefono_confirmado");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("username");
 
                     b.HasKey("Id");
 
@@ -287,50 +348,55 @@ namespace SIAE_LA.Migrations
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
-                        .HasDatabaseName("UserNameIndex")
-                        .HasFilter("[NormalizedUserName] IS NOT NULL");
+                        .HasDatabaseName("UserNameIndex");
 
                     b.HasIndex("PersonaId")
-                        .IsUnique()
-                        .HasFilter("[PersonaId] IS NOT NULL");
+                        .IsUnique();
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("usuarios", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Calificacion", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("calificacion_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<int>("AlumnoId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("alumno_id");
 
                     b.Property<int>("CurriculaId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("curricula_id");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<decimal>("Nota")
                         .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("nota");
 
                     b.HasKey("Id");
 
                     b.HasIndex("AlumnoId");
 
                     b.HasIndex("CurriculaId", "AlumnoId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ux_calificacion_curricula_alumno");
 
-                    b.ToTable("CALIFICACION", null, t =>
+                    b.ToTable("calificacion", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Calificacion_Nota", "[Nota]>=0 AND [Nota]<=100");
+                            t.HasCheckConstraint("ck_calificacion_nota", "nota >= 0 AND nota <= 100");
                         });
                 });
 
@@ -338,25 +404,30 @@ namespace SIAE_LA.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("curricula_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<string>("Descripcion")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("descripcion");
 
                     b.Property<int>("DocenteNivelDetalleCursoId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("docente_nivel_detalle_curso_id");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<int?>("NivelDetalleCursoId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -364,86 +435,103 @@ namespace SIAE_LA.Migrations
 
                     b.HasIndex("NivelDetalleCursoId");
 
-                    b.ToTable("CURRICULA", (string)null);
+                    b.ToTable("curricula", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Curso", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("curso_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<string>("Codigo")
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("codigo");
 
                     b.Property<string>("Descripcion")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("descripcion");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Codigo");
+                    b.HasIndex("Codigo")
+                        .HasDatabaseName("ix_curso_codigo");
 
-                    b.ToTable("CURSO", (string)null);
+                    b.ToTable("curso", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Docente", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("docente_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<string>("GradoEstudio")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("grado_estudio");
 
                     b.Property<int>("PersonaId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("persona_id");
 
                     b.HasKey("Id");
 
                     b.HasIndex("PersonaId")
                         .IsUnique();
 
-                    b.ToTable("DOCENTE", (string)null);
+                    b.ToTable("docente", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.DocenteNivelDetalleCurso", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("docente_nivel_detalle_curso_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<int>("DocenteId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("docente_id");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<int>("NivelDetalleCursoId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("nivel_detalle_curso_id");
 
                     b.HasKey("Id");
 
@@ -452,117 +540,141 @@ namespace SIAE_LA.Migrations
                     b.HasIndex("NivelDetalleCursoId", "DocenteId")
                         .IsUnique();
 
-                    b.ToTable("DOCENTE_NIVELDETALLE_CURSO", (string)null);
+                    b.ToTable("docente_nivel_detalle_curso", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.GradoSeccion", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("grado_seccion_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<string>("DescripcionGrado")
                         .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("descripcion_grado");
 
                     b.Property<string>("DescripcionSeccion")
                         .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("descripcion_seccion");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.HasKey("Id");
 
-                    b.ToTable("GRADO_SECCION", (string)null);
+                    b.ToTable("grado_seccion", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Horario", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("horario_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<string>("DiaSemana")
                         .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("nvarchar(15)");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("dia_semana");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<TimeSpan>("HoraFin")
-                        .HasColumnType("time");
+                        .HasColumnType("interval")
+                        .HasColumnName("hora_fin");
 
                     b.Property<TimeSpan>("HoraInicio")
-                        .HasColumnType("time");
+                        .HasColumnType("interval")
+                        .HasColumnName("hora_inicio");
 
                     b.Property<int>("NivelDetalleCursoId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("nivel_detalle_curso_id");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NivelDetalleCursoId");
 
-                    b.ToTable("HORARIO", (string)null);
+                    b.ToTable("horario", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Matricula", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("matricula_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<int>("AlumnoId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("alumno_id");
 
                     b.Property<int?>("ApoderadoId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("apoderado_id");
 
                     b.Property<string>("Codigo")
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("codigo");
 
-                    b.Property<bool?>("EsRepetente")
-                        .HasColumnType("bit");
+                    b.Property<bool?>("EsRepitente")
+                        .HasColumnType("boolean")
+                        .HasColumnName("es_repitente");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<string>("InstitucionProcedencia")
                         .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("institucion_procedencia");
 
                     b.Property<int>("NivelDetalleId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("nivel_detalle_id");
 
                     b.Property<int>("PeriodoId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("periodo_id");
 
                     b.Property<string>("Situacion")
                         .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("situacion");
 
                     b.Property<string>("ValorCodigo")
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("valor_codigo");
 
                     b.HasKey("Id");
 
@@ -575,66 +687,79 @@ namespace SIAE_LA.Migrations
                     b.HasIndex("AlumnoId", "NivelDetalleId", "PeriodoId")
                         .IsUnique();
 
-                    b.ToTable("MATRICULA", (string)null);
+                    b.ToTable("matricula", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Nivel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("nivel_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<string>("DescripcionNivel")
                         .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("descripcion_nivel");
 
                     b.Property<string>("DescripcionTurno")
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("descripcion_turno");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<string>("Horario")
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("horario");
 
                     b.HasKey("Id");
 
-                    b.ToTable("NIVEL", (string)null);
+                    b.ToTable("nivel", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.NivelDetalle", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("nivel_detalle_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<int>("GradoSeccionId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("grado_seccion_id");
 
                     b.Property<int>("NivelId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("nivel_id");
 
                     b.Property<int?>("TotalVacantes")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("total_vacantes");
 
                     b.Property<int?>("VacantesOcupadas")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("vacantes_ocupadas");
 
                     b.HasKey("Id");
 
@@ -643,28 +768,33 @@ namespace SIAE_LA.Migrations
                     b.HasIndex("NivelId", "GradoSeccionId")
                         .IsUnique();
 
-                    b.ToTable("NIVEL_DETALLE", (string)null);
+                    b.ToTable("nivel_detalle", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.NivelDetalleCurso", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("nivel_detalle_curso_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<int>("CursoId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("curso_id");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<int>("NivelDetalleId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("nivel_detalle_id");
 
                     b.HasKey("Id");
 
@@ -673,107 +803,124 @@ namespace SIAE_LA.Migrations
                     b.HasIndex("NivelDetalleId", "CursoId")
                         .IsUnique();
 
-                    b.ToTable("NIVEL_DETALLE_CURSO", (string)null);
+                    b.ToTable("nivel_detalle_curso", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Periodo", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer")
+                        .HasColumnName("periodo_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<string>("Descripcion")
                         .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("descripcion");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.HasKey("Id");
 
-                    b.ToTable("PERIODO", (string)null);
+                    b.ToTable("periodo", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Persona", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
 
                     b.Property<string>("Apellidos")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("apellidos");
 
                     b.Property<string>("Ciudad")
                         .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("ciudad");
 
                     b.Property<string>("Codigo")
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("codigo");
 
                     b.Property<string>("Direccion")
                         .HasMaxLength(140)
-                        .HasColumnType("nvarchar(140)");
+                        .HasColumnType("character varying(140)")
+                        .HasColumnName("direccion");
 
                     b.Property<string>("DocumentoIdentidad")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("documento_identidad");
 
                     b.Property<string>("Email")
                         .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("email");
 
                     b.Property<DateTime?>("FechaNacimiento")
                         .IsRequired()
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_nacimiento");
 
                     b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro");
 
                     b.Property<string>("Nombres")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("nombres");
 
                     b.Property<string>("NumeroTelefono")
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("numero_telefono");
 
                     b.Property<string>("Sexo")
                         .IsRequired()
                         .HasMaxLength(1)
-                        .HasColumnType("nvarchar(1)");
+                        .HasColumnType("character varying(1)")
+                        .HasColumnName("sexo");
 
                     b.Property<string>("ValorCodigo")
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("valor_codigo");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DocumentoIdentidad")
                         .IsUnique();
 
-                    b.ToTable("PERSONA", null, t =>
+                    b.ToTable("persona", null, t =>
                         {
-                            t.HasCheckConstraint("CK_PERSONA_DOCID_FORMAT", "(DocumentoIdentidad LIKE '[0-9][0-9][0-9]-[0-3][0-9][0-1][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][A-Z]'  OR DocumentoIdentidad LIKE 'TUTOR-[0-9][0-9][0-9]-[0-3][0-9][0-1][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][A-Z]')");
+                            t.HasCheckConstraint("CK_PERSONA_DOCID_FORMAT", "(\r\n                        documento_identidad ~ '^\\d{3}-\\d{6}-\\d{3,4}[A-Z]?$'\r\n                        OR documento_identidad ~ '^TUTOR-\\d{3}-\\d{6}-\\d{3,4}[A-Z]?$'\r\n                      )");
 
-                            t.HasCheckConstraint("CK_PERSONA_SEXO", "Sexo IN ('M','F')");
+                            t.HasCheckConstraint("CK_PERSONA_SEXO", "sexo IN ('M','F','O')");
 
-                            t.HasCheckConstraint("CK_PERSONA_TEL_NI", "NumeroTelefono IS NULL OR NumeroTelefono LIKE '________'");
+                            t.HasCheckConstraint("CK_PERSONA_TEL_NI", "(\r\n                        numero_telefono IS NULL\r\n                        OR numero_telefono ~ '^\\+505\\d{8}$'\r\n                        OR numero_telefono ~ '^\\d{8}$'\r\n                      )");
                         });
                 });
 
@@ -837,6 +984,25 @@ namespace SIAE_LA.Migrations
                         .IsRequired();
 
                     b.Navigation("Persona");
+                });
+
+            modelBuilder.Entity("SIAE_LA.Domain.Entities.AlumnoApoderado", b =>
+                {
+                    b.HasOne("SIAE_LA.Domain.Entities.Alumno", "Alumno")
+                        .WithMany("Apoderados")
+                        .HasForeignKey("AlumnoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SIAE_LA.Domain.Entities.Apoderado", "Apoderado")
+                        .WithMany()
+                        .HasForeignKey("ApoderadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Alumno");
+
+                    b.Navigation("Apoderado");
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Apoderado", b =>
@@ -1009,6 +1175,8 @@ namespace SIAE_LA.Migrations
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Alumno", b =>
                 {
+                    b.Navigation("Apoderados");
+
                     b.Navigation("Calificaciones");
 
                     b.Navigation("Matriculas");

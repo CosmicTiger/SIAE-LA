@@ -8,7 +8,20 @@ public class MatriculaConfig : IEntityTypeConfiguration<Matricula>
 {
     public void Configure(EntityTypeBuilder<Matricula> b)
     {
-        b.ToTable("MATRICULA");
+        b.ToTable("matricula");
+
+        b.Property(x => x.Id).HasColumnName("matricula_id");
+        b.Property(x => x.ValorCodigo).HasColumnName("valor_codigo");
+        b.Property(x => x.Codigo).HasColumnName("codigo");
+        b.Property(x => x.Situacion).HasColumnName("situacion");
+        b.Property(x => x.AlumnoId).HasColumnName("alumno_id");
+        b.Property(x => x.NivelDetalleId).HasColumnName("nivel_detalle_id");
+        b.Property(x => x.ApoderadoId).HasColumnName("apoderado_id");
+        b.Property(x => x.InstitucionProcedencia).HasColumnName("institucion_procedencia");
+        b.Property(x => x.EsRepitente).HasColumnName("es_repitente");
+        b.Property(x => x.PeriodoId).HasColumnName("periodo_id");
+        b.Property(x => x.Activo).HasColumnName("activo");
+        b.Property(x => x.FechaRegistro).HasColumnName("fecha_registro");
 
         b.HasIndex(x => new { x.AlumnoId, x.NivelDetalleId, x.PeriodoId }).IsUnique();
 

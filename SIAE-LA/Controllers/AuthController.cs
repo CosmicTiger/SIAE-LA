@@ -1,5 +1,4 @@
-﻿// AuthController.cs
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SIAE_LA.Domain.Entities;
@@ -106,7 +105,7 @@ public class AuthController : ControllerBase
                     Sexo = dto.Persona!.Sexo,
                     Ciudad = dto.Persona!.Ciudad,
                     Direccion = dto.Persona!.Direccion,
-                    NumeroTelefono = telE164,               // ← NEW (tel E.164 o null)
+                    NumeroTelefono = telE164,               // ← NEW (tel E.164 or null)
                     Email = dto.Email
                 };
                 _db.Personas.Add(p);
@@ -168,7 +167,11 @@ public class AuthController : ControllerBase
 
         var roles = await _userManager.GetRolesAsync(user);
         var token = _tokenService.CreateToken(user, roles);
-        return Ok(new AuthResponse(token, user.Email!, user.FullName, roles.ToList()));
+        return Ok(new
+        {
+            data = new AuthResponse(token, user.Email!, user.FullName, roles.ToList()),
+            message = "Inicio de sesión exitoso"
+        });
     }
 
     [HttpGet("me")]

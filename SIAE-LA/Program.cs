@@ -1,22 +1,97 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
-using System.Text;
-
-using SIAE_LA.Infrastructure.Persistence;
 using SIAE_LA.Domain.Entities;
+using SIAE_LA.Infrastructure.Persistence;
 using SIAE_LA.Services;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // DbContext
+//var dbProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "SqlServer";
+//var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+//    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection no está configurada");
+
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//{
+//    if (dbProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
+//        options.UseNpgsql(connectionString);
+//    else if (dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+//        options.UseSqlServer(connectionString);
+//    else
+//        throw new InvalidOperationException($"DatabaseProvider '{dbProvider}' no soportado.");
+//});
+// small helper to mask sensitive parts of connection strings for logs
+static string MaskConnectionString(string cs)
+{
+    if (string.IsNullOrWhiteSpace(cs)) return cs ?? string.Empty;
+
+    try
+    {
+        // Mask URL form: scheme://user:pass@host...
+        var urlPattern = System.Text.RegularExpressions.Regex.Replace(
+            cs,
+            @"(://[^:@\/\s]+:)([^@\/\s]+)(@)",
+            "$1*****$3",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (urlPattern != cs) return urlPattern;
+
+        // Mask key=value pairs like Password=..., pwd=..., Pass=...
+        var kvPattern = System.Text.RegularExpressions.Regex.Replace(
+            cs,
+            @"(?<=\b(password|pwd|pass)\s*=\s*)([^;]+)",
+            "*****",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return kvPattern;
+    }
+    catch
+    {
+        return "*****";
+    }
+}
+
+// Build a lightweight logger for startup diagnostics (console)
+using var startupLoggerFactory = LoggerFactory.Create(lb => lb.AddConsole());
+var startupLogger = startupLoggerFactory.CreateLogger("Startup");
+
+// DbContext: choose provider based on config (default -> PostgreSQL)
+var dbProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "PostgreSQL";
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection no está configurada");
+
+// Log chosen variables (connection string masked)
+startupLogger.LogInformation("Database provider configured: {Provider}", dbProvider);
+startupLogger.LogInformation("DefaultConnection (masked): {ConnectionString}", MaskConnectionString(connectionString));
+
+// Configure DbContext using provider selection. Defaults to PostgreSQL unless DatabaseProvider == "SqlServer"
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection no está configurada")));
+{
+    if (dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+    {
+        startupLogger.LogInformation("Configuring DbContext to use SQL Server.");
+        options.UseSqlServer(connectionString);
+    }
+    else if (dbProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
+             dbProvider.Equals("Npgsql", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(dbProvider, "Postgres", StringComparison.OrdinalIgnoreCase))
+    {
+        startupLogger.LogInformation("Configuring DbContext to use PostgreSQL (Npgsql).");
+        options.UseNpgsql(connectionString);
+    }
+    else
+    {
+        startupLogger.LogWarning("Unknown DatabaseProvider '{Provider}' — falling back to PostgreSQL (Npgsql).", dbProvider);
+        options.UseNpgsql(connectionString);
+    }
+
+    options.EnableDetailedErrors();
+});
 
 // Identity (cookies siguen existiendo para SignInManager, pero no serán el default)
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(o =>
@@ -76,15 +151,6 @@ builder.Services.AddControllers();
 var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:4200" };
 builder.Services.AddCors(o => o.AddPolicy("spa", p => p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
-//builder.Services.AddCors(opt =>
-//{
-//    opt.AddPolicy("spa", p => p
-//        .WithOrigins("http://localhost:4200")
-//        .AllowAnyHeader()
-//        .AllowAnyMethod()
-//        .AllowCredentials());
-//});
-
 // Autorización
 builder.Services.AddAuthorization(o =>
 {
@@ -136,5 +202,7 @@ app.UseAuthorization();
 // Seed de datos iniciales (roles, usuario admin, datos de ejemplo)
 await app.UseDataSeeder();
 
-app.MapControllers();
+// MAP CONTROLLERS: exigir autorización por defecto para controladores API
+// Esto hará que todos los endpoints de controllers requieran auten
+app.MapControllers().RequireAuthorization();
 app.Run();

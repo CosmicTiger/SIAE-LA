@@ -38,6 +38,13 @@ public class DataSeeder
         await SeedPeopleAndUsersAsync();
     }
 
+    private static DateTime UtcDate(int y, int m, int d)
+    => new DateTime(y, m, d, 0, 0, 0, DateTimeKind.Utc);
+
+    private static DateTime AsUtcDate(DateTime dt)
+        => new DateTime(dt.Year, dt.Month, dt.Day, 0, 0, 0, DateTimeKind.Utc);
+
+
     // ─────────────────────────────────────────────────────────────────────────────
     // 1) Roles
     // ─────────────────────────────────────────────────────────────────────────────
@@ -176,8 +183,8 @@ public class DataSeeder
         if (!await _db.Docentes.AnyAsync())
         {
             // Personas completas (cédula, fecha, sexo, teléfono normalizado)
-            var fnAna = new DateTime(1990, 7, 16);
-            var fnLuis = new DateTime(1987, 3, 10);
+            var fnAna = UtcDate(1990, 7, 16);
+            var fnLuis = UtcDate(1987, 3, 10);
 
             var cedAna = CedulaNicaraguenseValidadorHelper.BuildCedula("001", fnAna, 1027, 'B');
             var cedLuis = CedulaNicaraguenseValidadorHelper.BuildCedula("001", fnLuis, 2045, 'C');
@@ -367,7 +374,7 @@ public class DataSeeder
         if (!await _db.Alumnos.AnyAsync())
         {
             // Tutor (adulto con cédula NI válida)
-            var fnTutor = new DateTime(1985, 5, 5);
+            var fnTutor = UtcDate(1985, 5, 30);
             var cedTutor = CedulaNicaraguenseValidadorHelper.BuildCedula("001", fnTutor, 4500, 'E');
             TelefonoNicaraguenseValidadorHelper.TryNormalizePhoneNi("8888-1111", out var telTutor);
 
@@ -390,7 +397,7 @@ public class DataSeeder
             await EnsureUserAsync("maria.tutora@demo.local", "Tutor123!", "María Juárez", pTutor.Id, approved: true, "Tutor");
 
             // Alumno menor → DocumentoIdentidad = "TUTOR-<cedTutor>"
-            var fnAlumno = DateTime.UtcNow.AddYears(-12).Date; // 12 años
+            var fnAlumno = AsUtcDate(DateTime.UtcNow.AddYears(-12)); // 12 años
             TelefonoNicaraguenseValidadorHelper.TryNormalizePhoneNi("7777-2222", out var telAlumno);
 
             var pAlumno = new Persona

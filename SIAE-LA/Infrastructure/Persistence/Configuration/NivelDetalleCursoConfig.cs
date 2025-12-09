@@ -8,7 +8,12 @@ public class NivelDetalleCursoConfig : IEntityTypeConfiguration<NivelDetalleCurs
 {
     public void Configure(EntityTypeBuilder<NivelDetalleCurso> b)
     {
-        b.ToTable("NIVEL_DETALLE_CURSO");
+        b.ToTable("nivel_detalle_curso");
+        b.Property(x => x.Id).HasColumnName("nivel_detalle_curso_id");
+        b.Property(x => x.NivelDetalleId).HasColumnName("nivel_detalle_id");
+        b.Property(x => x.CursoId).HasColumnName("curso_id");
+        b.Property(x => x.Activo).HasColumnName("activo");
+        b.Property(x => x.FechaRegistro).HasColumnName("fecha_registro");
         b.HasIndex(x => new { x.NivelDetalleId, x.CursoId }).IsUnique();
 
         b.HasOne(x => x.NivelDetalle)

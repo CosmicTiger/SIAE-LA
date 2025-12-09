@@ -8,11 +8,20 @@ public class CalificacionConfig : IEntityTypeConfiguration<Calificacion>
 {
     public void Configure(EntityTypeBuilder<Calificacion> b)
     {
-        b.ToTable("CALIFICACION");
-        b.Property(x => x.Nota).HasPrecision(5, 2);
-        b.ToTable(t => t.HasCheckConstraint("CK_Calificacion_Nota", "[Nota]>=0 AND [Nota]<=100"));
+        b.ToTable("calificacion");
+        b.Property(x => x.Id).HasColumnName("calificacion_id");
+        b.Property(x => x.CurriculaId).HasColumnName("curricula_id");
+        b.Property(x => x.AlumnoId).HasColumnName("alumno_id");
+        b.Property(x => x.Nota).HasColumnName("nota").HasPrecision(5, 2);
+        b.Property(x => x.Activo).HasColumnName("activo");
+        b.Property(x => x.FechaRegistro).HasColumnName("fecha_registro");
 
-        b.HasIndex(x => new { x.CurriculaId, x.AlumnoId }).IsUnique();
+        // CHECK en snake_case (válido para PostgreSQL y también para SQL Server)
+        b.ToTable(t => t.HasCheckConstraint("ck_calificacion_nota", "nota >= 0 AND nota <= 100"));
+
+        b.HasIndex(x => new { x.CurriculaId, x.AlumnoId })
+         .IsUnique()
+         .HasDatabaseName("ux_calificacion_curricula_alumno");
 
         b.HasOne(x => x.Curricula)
          .WithMany(c => c.Calificaciones)
