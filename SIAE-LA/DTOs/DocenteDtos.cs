@@ -10,6 +10,7 @@ namespace SIAE_LA.DTOs
     string? DocumentoIdentidad,
     string? Ciudad,
     string? Direccion,
+    string ? Sexo,
     bool Activo
     );
 

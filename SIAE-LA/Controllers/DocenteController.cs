@@ -525,6 +525,7 @@ namespace SIAE_LA.Controllers
                 d.Persona.DocumentoIdentidad,
                 d.Persona.Ciudad,
                 d.Persona.Direccion,
+                d.Persona.Sexo,
                 d.Activo
             );
 
@@ -660,6 +661,7 @@ namespace SIAE_LA.Controllers
                     x.Docente.Persona.DocumentoIdentidad,
                     x.Docente.Persona.Ciudad,
                     x.Docente.Persona.Direccion,
+                    x.Docente.Persona.Sexo,
                     x.Docente.Activo
                 ))
                 .ToListAsync();
@@ -695,6 +697,7 @@ namespace SIAE_LA.Controllers
                 d.Persona.DocumentoIdentidad,
                 d.Persona.Ciudad,
                 d.Persona.Direccion,
+                d.Persona.Sexo,
                 d.Activo);
             return Ok(ApiResponse<DocenteReadDto>.Success(dto));
         }
