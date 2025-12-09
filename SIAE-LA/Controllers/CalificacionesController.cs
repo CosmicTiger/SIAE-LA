@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SIAE_LA.Abstractions;
+using Microsoft.AspNetCore.Identity;
 using SIAE_LA.Domain.Entities;
 using SIAE_LA.DTOs;
 using SIAE_LA.Infrastructure.Persistence;
@@ -17,9 +18,19 @@ namespace SIAE_LA.Controllers
     public sealed class CalificacionesController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
-        public CalificacionesController(ApplicationDbContext db) => _db = db;
+        private readonly UserManager<ApplicationUser> _userManager;
+        public CalificacionesController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        {
+            _db = db;
+            _userManager = userManager;
+        }
 
+        /// <summary>
+        /// Registra una nueva calificación.
+        /// Roles permitidos: Admin, Direccion, Subdireccion, JefeArea, Docente.
+        /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea,Docente")]
         public async Task<ActionResult<ApiResponse<CalificacionReadDto>>> Crear([FromBody] CalificacionCreateDto dto)
         {
             // Regla de unicidad: (CurriculaId, AlumnoId)
@@ -39,7 +50,12 @@ namespace SIAE_LA.Controllers
             return Ok(ApiResponse<CalificacionReadDto>.Success(new(entity.Id, entity.CurriculaId, entity.AlumnoId, entity.Nota, entity.FechaRegistro, entity.Activo), "Calificación registrada"));
         }
 
+        /// <summary>
+        /// Actualiza una calificación existente.
+        /// Roles permitidos: Admin, Direccion, Subdireccion, JefeArea, Docente.
+        /// </summary>
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea,Docente")]
         public async Task<ActionResult<ApiResponse<CalificacionReadDto>>> Editar(int id, [FromBody] CalificacionUpdateDto dto)
         {
             var c = await _db.Calificaciones.FindAsync(id);
@@ -49,10 +65,35 @@ namespace SIAE_LA.Controllers
             return Ok(ApiResponse<CalificacionReadDto>.Success(new(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo), "Calificación actualizada"));
         }
 
+        /// <summary>
+        /// Obtiene las calificaciones de un alumno.
+        /// Roles permitidos: Admin, Direccion, Subdireccion, JefeArea, Docente, Estudiante, Tutor.
+        /// - Si el caller es Estudiante sólo puede ver sus propias calificaciones.
+        /// - Si el caller es Tutor sólo puede ver calificaciones de sus pupilos con asignación activa.
+        /// - Docentes y administrativos pueden consultar cualquier alumno.
+        /// </summary>
         [HttpGet("by-alumno/{alumnoId:int}")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea,Docente,Estudiante,Tutor")]
         public async Task<ActionResult<ApiResponse<IEnumerable<CalificacionReadDto>>>> PorAlumno(int alumnoId, [FromQuery] int? periodoId)
         {
-            // Si envían periodoId, filtramos por la matrícula del alumno en ese periodo y el mismo NivelDetalle de la currícula
+            // Control de acceso para Estudiante/Tutor
+            var user = await _userManager.GetUserAsync(User);
+            if (User.IsInRole("Estudiante"))
+            {
+                if (user?.PersonaId is null) return Forbid();
+                var alumno = await _db.Alumnos.AsNoTracking().FirstOrDefaultAsync(a => a.PersonaId == user.PersonaId);
+                if (alumno is null || alumno.Id != alumnoId) return Forbid();
+            }
+            else if (User.IsInRole("Tutor"))
+            {
+                if (user?.PersonaId is null) return Forbid();
+                var ap = await _db.Apoderados.AsNoTracking().FirstOrDefaultAsync(a => a.PersonaId == user.PersonaId);
+                if (ap is null) return Forbid();
+                var has = await _db.AlumnosApoderados.AnyAsync(a => a.ApoderadoId == ap.Id && a.AlumnoId == alumnoId && a.FechaFin == null);
+                if (!has) return Forbid();
+            }
+
+            // Construir consulta de calificaciones para el alumno
             var q = _db.Calificaciones.AsNoTracking().Where(c => c.AlumnoId == alumnoId);
             if (periodoId is not null)
             {
@@ -65,9 +106,10 @@ namespace SIAE_LA.Controllers
                     where c.AlumnoId == alumnoId
                     select c;
             }
+
             var list = await q.OrderByDescending(c => c.FechaRegistro)
-            .Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo))
-            .ToListAsync();
+                .Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo))
+                .ToListAsync();
             return Ok(ApiResponse<IEnumerable<CalificacionReadDto>>.Success(list));
         }
     }

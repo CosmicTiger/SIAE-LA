@@ -30,12 +30,38 @@ namespace SIAE_LA.Controllers
 
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
         public async Task<ActionResult<ApiResponse<PeriodoReadDto>>> Create(PeriodoCreateDto dto)
         {
+            if (!ModelState.IsValid) return BadRequest(ApiResponse<PeriodoReadDto>.Fail(SIAE_LA.Utils.ModelStateHelper.BuildErrors(ModelState)));
             var e = new Domain.Entities.Periodo { Descripcion = dto.Descripcion, Activo = true };
             _db.Periodos.Add(e);
             await _db.SaveChangesAsync();
-            return Ok(ApiResponse<PeriodoReadDto>.Success(new(e.Id, e.Descripcion, e.Activo), "Período creado"));
+            return CreatedAtAction(nameof(Get), new { id = e.Id }, ApiResponse<PeriodoReadDto>.Success(new(e.Id, e.Descripcion, e.Activo), "Período creado"));
+        }
+
+        [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
+        public async Task<ActionResult<ApiResponse<PeriodoReadDto>>> Update(int id, [FromBody] PeriodoUpdateDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ApiResponse<PeriodoReadDto>.Fail(SIAE_LA.Utils.ModelStateHelper.BuildErrors(ModelState)));
+            var e = await _db.Periodos.FindAsync(id);
+            if (e is null) return NotFound(ApiResponse<PeriodoReadDto>.Fail("Período no encontrado"));
+            e.Descripcion = dto.Descripcion;
+            e.Activo = dto.Activo;
+            await _db.SaveChangesAsync();
+            return Ok(ApiResponse<PeriodoReadDto>.Success(new(e.Id, e.Descripcion, e.Activo), "Período actualizado"));
+        }
+
+        [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
+        public async Task<ActionResult<ApiResponse<string>>> Delete(int id)
+        {
+            var e = await _db.Periodos.FindAsync(id);
+            if (e is null) return NotFound(ApiResponse<string>.Fail("Período no encontrado"));
+            e.Activo = false;
+            await _db.SaveChangesAsync();
+            return Ok(ApiResponse<string>.Success("OK", "Período desactivado"));
         }
     }
 }

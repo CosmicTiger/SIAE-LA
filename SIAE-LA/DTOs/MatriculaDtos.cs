@@ -44,11 +44,12 @@ namespace SIAE_LA.DTOs
         int Id,
         AlumnoReadDto alumno,
         NivelDetalleDto NivelDetalle,
-        int PeriodoId,
-        int? ApoderadoId,
+        PeriodoReadDto Periodo,
+        TutorDto? Apoderado,
         string? Situacion,
         string? InstitucionProcedencia,
         bool? EsRepetente,
+        bool Activo,
         DateTime FechaRegistro
     );
 

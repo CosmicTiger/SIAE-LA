@@ -86,11 +86,26 @@ namespace SIAE_LA.Controllers
                         m.NivelDetalle.TotalVacantes,
                         m.NivelDetalle.VacantesOcupadas
                     ),
-                    m.PeriodoId,
-                    m.ApoderadoId,
+                    new PeriodoReadDto(
+                        m.Periodo.Id,
+                        m.Periodo.Descripcion,
+                        m.Periodo.Activo
+                    ),
+                    m.Apoderado != null && m.Apoderado.Persona != null
+                        ? new TutorDto(
+                            m.Apoderado.Id,
+                            m.Apoderado.PersonaId,
+                            m.Apoderado.Persona.Nombres,
+                            m.Apoderado.Persona.Apellidos,
+                            m.Apoderado.Persona.DocumentoIdentidad,
+                            m.Apoderado.Persona.Email,
+                            m.Apoderado.Persona.NumeroTelefono
+                        )
+                        : null,
                     m.Situacion,
                     m.InstitucionProcedencia,
                     m.EsRepitente,
+                    m.Activo,
                     m.FechaRegistro
                 ))
                 .ToListAsync();

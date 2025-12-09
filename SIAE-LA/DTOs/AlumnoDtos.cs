@@ -50,4 +50,13 @@
         // Estado del Alumno (no de Persona)
         public bool Activo { get; set; } = true;
     }
+
+    public sealed class AlumnoStatusUpdateDto
+    {
+        // Estado del Alumno (no de Persona)
+        public bool Activo { get; set; } = true;
+    }
+
+    // DTO para devolver horarios por alumno
+    public sealed record StudentHorarioDto(int AlumnoId, IEnumerable<HorarioReadDto> Horarios);
 }

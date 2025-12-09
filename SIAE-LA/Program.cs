@@ -147,6 +147,9 @@ builder.Services.AddScoped<ITokenService>(sp => new TokenService(issuer, audienc
 // Controllers
 builder.Services.AddControllers();
 
+// Repository for reportes
+builder.Services.AddScoped<SIAE_LA.Abstractions.IReportesRepository, SIAE_LA.Infrastructure.ReportesRepository>();
+
 // CORS para Angular
 var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:4200" };
 builder.Services.AddCors(o => o.AddPolicy("spa", p => p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));

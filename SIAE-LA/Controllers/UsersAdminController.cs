@@ -25,6 +25,8 @@ public class UsersAdminController(ApplicationDbContext db, UserManager<Applicati
     public sealed record PendingUserDto(string Id, string? Email, string? FullName, DateTime? FechaRegistro);
     public sealed record UserReadDto(string Id, string? UserName, string? Email, string FullName, bool IsApproved, IEnumerable<string> Roles, int? PersonaId);
     public sealed record UserUpdateDto(string? FullName, string? Email, bool? IsApproved, IEnumerable<string>? Roles);
+    public sealed record PasswordUpdateDto(string NewPassword);
+    public sealed record EmailUpdateDto(string NewEmail);
     public sealed record UsersPageResult(int Page, int PageSize, int TotalItems, IEnumerable<UserReadDto> Items);
 
     private static readonly string[] ElevatedRoles = new[] { "Admin", "Direccion", "Subdireccion" };
@@ -43,6 +45,96 @@ public class UsersAdminController(ApplicationDbContext db, UserManager<Applicati
             .ToListAsync();
 
         return Ok(ApiResponse<IEnumerable<PendingUserDto>>.Success(list));
+    }
+
+    /// <summary>
+    /// Convierte o revoca a un Docente en JefeArea.
+    /// Roles permitidos: Admin.
+    /// - Si promote=true: asigna rol JefeArea al usuario y al docente correspondiente.
+    /// - Si promote=false: revoca el rol JefeArea.
+    /// </summary>
+    [HttpPost("docente/{docenteId}/jefearea")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> SetJefeArea(int docenteId, [FromQuery] bool promote = true)
+    {
+        var docente = await db.Docentes.Include(d => d.Persona).FirstOrDefaultAsync(d => d.Id == docenteId);
+        if (docente is null) return NotFound(ApiResponse<string>.Fail("Docente no encontrado"));
+
+        var user = await um.Users.FirstOrDefaultAsync(u => u.PersonaId == docente.PersonaId);
+        if (user is null) return NotFound(ApiResponse<string>.Fail("Usuario vinculado al docente no encontrado"));
+
+        if (promote)
+        {
+            var r = await um.AddToRoleAsync(user, "JefeArea");
+            if (!r.Succeeded) return BadRequest(ApiResponse<string>.Fail(string.Join("; ", r.Errors.Select(e => e.Description))));
+            return Ok(ApiResponse<string>.Success("OK", "Docente promovido a JefeArea"));
+        }
+        else
+        {
+            var r = await um.RemoveFromRoleAsync(user, "JefeArea");
+            if (!r.Succeeded) return BadRequest(ApiResponse<string>.Fail(string.Join("; ", r.Errors.Select(e => e.Description))));
+            return Ok(ApiResponse<string>.Success("OK", "JefeArea revocado"));
+        }
+    }
+
+    /// <summary>
+    /// Actualiza la contraseña de un usuario.
+    /// Roles permitidos: Admin, JefeArea.
+    /// - Admin puede actualizar la contraseña de cualquier usuario.
+    /// - JefeArea puede actualizar contraseñas sólo de usuarios con rol Docente.
+    /// </summary>
+    [HttpPost("{id}/password")]
+    public async Task<IActionResult> UpdatePassword(string id, [FromBody] PasswordUpdateDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto?.NewPassword)) return BadRequest(ApiResponse<string>.Fail("NewPassword es requerido"));
+        var target = await um.FindByIdAsync(id);
+        if (target is null) return NotFound(ApiResponse<string>.Fail("Usuario no encontrado"));
+
+        var callerIsAdmin = User.IsInRole("Admin");
+        if (!callerIsAdmin && !User.IsInRole("JefeArea")) return Forbid();
+
+        if (User.IsInRole("JefeArea") && !callerIsAdmin)
+        {
+            // JefeArea puede cambiar contraseñas solo de Docentes
+            if (!await um.IsInRoleAsync(target, "Docente")) return Forbid();
+        }
+
+        var token = await um.GeneratePasswordResetTokenAsync(target);
+        var res = await um.ResetPasswordAsync(target, token, dto.NewPassword);
+        if (!res.Succeeded) return BadRequest(ApiResponse<string>.Fail(string.Join("; ", res.Errors.Select(e => e.Description))));
+        return Ok(ApiResponse<string>.Success("OK", "Contraseña actualizada"));
+    }
+
+    /// <summary>
+    /// Actualiza el email de un usuario.
+    /// Roles permitidos: Admin, JefeArea.
+    /// - Admin puede actualizar el email de cualquier usuario.
+    /// - JefeArea puede actualizar email sólo de Docentes.
+    /// </summary>
+    [HttpPost("{id}/email")]
+    public async Task<IActionResult> UpdateEmail(string id, [FromBody] EmailUpdateDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto?.NewEmail)) return BadRequest(ApiResponse<string>.Fail("NewEmail es requerido"));
+        var target = await um.FindByIdAsync(id);
+        if (target is null) return NotFound(ApiResponse<string>.Fail("Usuario no encontrado"));
+
+        var callerIsAdmin = User.IsInRole("Admin");
+        if (!callerIsAdmin && !User.IsInRole("JefeArea")) return Forbid();
+
+        if (User.IsInRole("JefeArea") && !callerIsAdmin)
+        {
+            if (!await um.IsInRoleAsync(target, "Docente")) return Forbid();
+        }
+
+        var existing = await um.FindByEmailAsync(dto.NewEmail);
+        if (existing is not null && existing.Id != target.Id)
+            return Conflict(ApiResponse<string>.Fail("El email ya está en uso por otro usuario."));
+
+        var setRes = await um.SetEmailAsync(target, dto.NewEmail);
+        if (!setRes.Succeeded) return BadRequest(ApiResponse<string>.Fail(string.Join("; ", setRes.Errors.Select(e => e.Description))));
+        target.UserName = dto.NewEmail;
+        await um.UpdateAsync(target);
+        return Ok(ApiResponse<string>.Success("OK", "Email actualizado"));
     }
 
     /// <summary>
@@ -307,5 +399,38 @@ public class UsersAdminController(ApplicationDbContext db, UserManager<Applicati
     {
         var roles = await rm.Roles.Select(r => r.Name!).ToListAsync();
         return Ok(ApiResponse<IEnumerable<string>>.Success(roles));
+    }
+
+    /// <summary>
+    /// Endpoint exclusivo para Jefes de Área: obtiene reportes y herramientas de gestión propias del JefeArea.
+    /// Roles: JefeArea
+    /// </summary>
+    [HttpGet("jefearea/tools")]
+    [Authorize(Roles = "JefeArea")]
+    public async Task<IActionResult> JefeAreaTools()
+    {
+        // Placeholder: devolver estadísticas rápidas
+        var docentesCount = await db.Docentes.CountAsync();
+        var jefesCount = await db.Set<IdentityUserRole<string>>().Where(ur => rm.Roles.Any(r => r.Id == ur.RoleId && r.Name == "JefeArea")).CountAsync();
+        return Ok(ApiResponse<object>.Success(new { Docentes = docentesCount, Jefes = jefesCount }));
+    }
+
+    /// <summary>
+    /// Endpoint exclusivo para Docentes (no JefeArea): herramientas propias del Docente.
+    /// Roles: Docente
+    /// </summary>
+    [HttpGet("docente/tools")]
+    [Authorize(Roles = "Docente")]
+    public async Task<IActionResult> DocenteTools()
+    {
+        // Placeholder: devolver lista de asignaciones activas para el docente que consulta
+        var user = await um.GetUserAsync(User);
+        if (user?.PersonaId is null) return Forbid();
+        var docente = await db.Docentes.FirstOrDefaultAsync(d => d.PersonaId == user.PersonaId);
+        if (docente is null) return Forbid();
+        var asigns = await db.DocentesNivelDetalleCurso.AsNoTracking().Where(a => a.DocenteId == docente.Id && a.Activo)
+            .Select(a => new { a.Id, a.NivelDetalleCursoId, a.FechaRegistro })
+            .ToListAsync();
+        return Ok(ApiResponse<object>.Success(new { Asignaciones = asigns }));
     }
 }

@@ -238,6 +238,7 @@ namespace SIAE_LA.Controllers
         // GET: api/alumnos/{id}
         // ======================================================================
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea,Docente,Estudiante,Tutor")]
         public async Task<ActionResult<ApiResponse<AlumnoDetailDto>>> GetOne(int id)
         {
             // Proyección en una sola consulta para evitar N+1
@@ -409,6 +410,115 @@ namespace SIAE_LA.Controllers
             );
 
             return Ok(ApiResponse<AlumnoDetailDto>.Success(dto));
+        }
+
+        /// <summary>
+        /// Devuelve las notas del alumno que realiza la petición (Estudiante) o del alumno indicado (Admin/Docente/Tutor según permisos).
+        /// Roles: Admin, Direccion, Subdireccion, JefeArea, Docente, Estudiante, Tutor
+        /// </summary>
+        [HttpGet("me/notas")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea,Docente,Estudiante,Tutor")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<CalificacionReadDto>>>> MyNotas([FromQuery] int? periodoId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user is null) return Unauthorized();
+
+            int? alumnoId = null;
+            if (User.IsInRole("Estudiante"))
+            {
+                if (user.PersonaId is null) return Forbid();
+                var a = await _db.Alumnos.AsNoTracking().FirstOrDefaultAsync(x => x.PersonaId == user.PersonaId);
+                if (a is null) return NotFound(ApiResponse<IEnumerable<CalificacionReadDto>>.Fail("Alumno no encontrado para el usuario"));
+                alumnoId = a.Id;
+            }
+            else if (User.IsInRole("Tutor"))
+            {
+                // Para tutor devolvemos notas de todos sus pupilos actuales
+                if (user.PersonaId is null) return Forbid();
+                var ap = await _db.Apoderados.AsNoTracking().FirstOrDefaultAsync(x => x.PersonaId == user.PersonaId);
+                if (ap is null) return Forbid();
+                var pupils = await _db.AlumnosApoderados.AsNoTracking().Where(x => x.ApoderadoId == ap.Id && x.FechaFin == null).Select(x => x.AlumnoId).ToListAsync();
+                var q = _db.Calificaciones.AsNoTracking().Where(c => pupils.Contains(c.AlumnoId));
+                if (periodoId is not null)
+                {
+                    var pid = periodoId.Value;
+                    q = from c in q
+                        join cur in _db.Curriculas on c.CurriculaId equals cur.Id
+                        join dndc in _db.DocentesNivelDetalleCurso on cur.DocenteNivelDetalleCursoId equals dndc.Id
+                        join ndc in _db.NivelesDetalleCurso on dndc.NivelDetalleCursoId equals ndc.Id
+                        join nd in _db.NivelesDetalle on ndc.NivelDetalleId equals nd.Id
+                        join m in _db.Matriculas on new { c.AlumnoId, nd.Id, PeriodoId = pid } equals new { m.AlumnoId, Id = m.NivelDetalleId, m.PeriodoId }
+                        select c;
+                }
+                var listTutor = await q.OrderByDescending(c => c.FechaRegistro).Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo)).ToListAsync();
+                return Ok(ApiResponse<IEnumerable<CalificacionReadDto>>.Success(listTutor));
+            }
+            else
+            {
+                return BadRequest(ApiResponse<IEnumerable<CalificacionReadDto>>.Fail("Endpoint para uso de perfiles autenticados: Estudiante o Tutor. Para administradores use /api/calificaciones/by-alumno/{id}"));
+            }
+
+            if (alumnoId is null) return BadRequest(ApiResponse<IEnumerable<CalificacionReadDto>>.Fail("Alumno no identificado"));
+            var q2 = _db.Calificaciones.AsNoTracking().Where(c => c.AlumnoId == alumnoId.Value);
+            if (periodoId is not null)
+            {
+                var pid = periodoId.Value;
+                q2 = from c in q2
+                     join cur in _db.Curriculas on c.CurriculaId equals cur.Id
+                     join dndc in _db.DocentesNivelDetalleCurso on cur.DocenteNivelDetalleCursoId equals dndc.Id
+                     join ndc in _db.NivelesDetalleCurso on dndc.NivelDetalleCursoId equals ndc.Id
+                     join nd in _db.NivelesDetalle on ndc.NivelDetalleId equals nd.Id
+                     join m in _db.Matriculas on new { c.AlumnoId, nd.Id, PeriodoId = pid } equals new { m.AlumnoId, Id = m.NivelDetalleId, m.PeriodoId }
+                     select c;
+            }
+            var result = await q2.OrderByDescending(c => c.FechaRegistro).Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo)).ToListAsync();
+            return Ok(ApiResponse<IEnumerable<CalificacionReadDto>>.Success(result));
+        }
+
+        /// <summary>
+        /// Devuelve el horario del alumno que realiza la petición (Estudiante) o de los pupilos del Tutor.
+        /// Roles: Admin, Direccion, Subdireccion, JefeArea, Docente, Estudiante, Tutor
+        /// </summary>
+        [HttpGet("me/horario")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea,Docente,Estudiante,Tutor")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<HorarioReadDto>>>> MyHorario()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user is null) return Unauthorized();
+
+            if (User.IsInRole("Estudiante"))
+            {
+                if (user.PersonaId is null) return Forbid();
+                var alumno = await _db.Alumnos.AsNoTracking().FirstOrDefaultAsync(a => a.PersonaId == user.PersonaId);
+                if (alumno is null) return NotFound(ApiResponse<IEnumerable<HorarioReadDto>>.Fail("Alumno no encontrado"));
+
+                var horarios = await (from h in _db.Horarios.AsNoTracking()
+                                      join ndc in _db.NivelesDetalleCurso on h.NivelDetalleCursoId equals ndc.Id
+                                      join nd in _db.NivelesDetalle on ndc.NivelDetalleId equals nd.Id
+                                      join m in _db.Matriculas on new { AlumnoId = alumno.Id, NivelDetalleId = nd.Id } equals new { m.AlumnoId, NivelDetalleId = m.NivelDetalleId }
+                                      select new HorarioReadDto(h.Id, h.NivelDetalleCursoId, h.DiaSemana, h.HoraInicio, h.HoraFin, h.Activo, h.FechaRegistro))
+                                      .ToListAsync();
+                return Ok(ApiResponse<IEnumerable<HorarioReadDto>>.Success(horarios));
+            }
+
+            if (User.IsInRole("Tutor"))
+            {
+                if (user.PersonaId is null) return Forbid();
+                var ap = await _db.Apoderados.AsNoTracking().FirstOrDefaultAsync(a => a.PersonaId == user.PersonaId);
+                if (ap is null) return Forbid();
+                var pupils = await _db.AlumnosApoderados.AsNoTracking().Where(x => x.ApoderadoId == ap.Id && x.FechaFin == null).Select(x => x.AlumnoId).ToListAsync();
+
+                var horarios = await (from h in _db.Horarios.AsNoTracking()
+                                      join ndc in _db.NivelesDetalleCurso on h.NivelDetalleCursoId equals ndc.Id
+                                      join nd in _db.NivelesDetalle on ndc.NivelDetalleId equals nd.Id
+                                      join m in _db.Matriculas on new { NivelDetalleId = nd.Id } equals new { NivelDetalleId = m.NivelDetalleId }
+                                      where pupils.Contains(m.AlumnoId)
+                                      select new HorarioReadDto(h.Id, h.NivelDetalleCursoId, h.DiaSemana, h.HoraInicio, h.HoraFin, h.Activo, h.FechaRegistro))
+                                      .ToListAsync();
+                return Ok(ApiResponse<IEnumerable<HorarioReadDto>>.Success(horarios));
+            }
+
+            return BadRequest(ApiResponse<IEnumerable<HorarioReadDto>>.Fail("Endpoint para Estudiante/Tutor. Administradores/Docentes deben usar endpoints de Horarios."));
         }
 
         // ======================================================================

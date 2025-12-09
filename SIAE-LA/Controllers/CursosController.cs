@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +11,7 @@ namespace SIAE_LA.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public sealed class CursosController : Controller
+    public sealed class CursosController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
         public CursosController(ApplicationDbContext db) => _db = db;
@@ -34,19 +33,33 @@ namespace SIAE_LA.Controllers
             return Ok(ApiResponse<PaginationResult<CursoReadDto>>.Success(page));
         }
 
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<ApiResponse<CursoReadDto>>> GetOne(int id)
+        {
+            var c = await _db.Cursos.FindAsync(id);
+            if (c is null) return NotFound(ApiResponse<CursoReadDto>.Fail("Curso no encontrado"));
+            return Ok(ApiResponse<CursoReadDto>.Success(new CursoReadDto(c.Id, c.Descripcion, c.Codigo, c.Activo)));
+        }
+
         [HttpPost]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
         public async Task<ActionResult<ApiResponse<CursoReadDto>>> Create([FromBody] CursoCreateDto dto)
         {
+            if (!ModelState.IsValid) return BadRequest(ApiResponse<CursoReadDto>.Fail(SIAE_LA.Utils.ModelStateHelper.BuildErrors(ModelState)));
+            var exists = await _db.Cursos.AnyAsync(c => c.Descripcion == dto.Descripcion);
+            if (exists) return Conflict(ApiResponse<CursoReadDto>.Fail("Ya existe un curso con la misma descripción."));
             var e = new Domain.Entities.Curso { Descripcion = dto.Descripcion, Codigo = dto.Codigo, Activo = true };
             _db.Cursos.Add(e);
             await _db.SaveChangesAsync();
             var read = new CursoReadDto(e.Id, e.Descripcion, e.Codigo, e.Activo);
-            return CreatedAtAction(nameof(GetAll), new { id = e.Id }, ApiResponse<CursoReadDto>.Success(read, "Curso creado"));
+            return CreatedAtAction(nameof(GetOne), new { id = e.Id }, ApiResponse<CursoReadDto>.Success(read, "Curso creado"));
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
         public async Task<ActionResult<ApiResponse<CursoReadDto>>> Update(int id, [FromBody] CursoUpdateDto dto)
         {
+            if (!ModelState.IsValid) return BadRequest(ApiResponse<CursoReadDto>.Fail(SIAE_LA.Utils.ModelStateHelper.BuildErrors(ModelState)));
             var e = await _db.Cursos.FindAsync(id);
             if (e is null) return NotFound(ApiResponse<CursoReadDto>.Fail("Curso no encontrado"));
             e.Descripcion = dto.Descripcion; e.Codigo = dto.Codigo; e.Activo = dto.Activo;
@@ -55,6 +68,7 @@ namespace SIAE_LA.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
         public async Task<ActionResult<ApiResponse<string>>> Delete(int id)
         {
             var e = await _db.Cursos.FindAsync(id);
