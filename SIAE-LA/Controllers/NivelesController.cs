@@ -150,5 +150,40 @@ namespace SIAE_LA.Controllers
             await _db.SaveChangesAsync();
             return Ok(ApiResponse<string>.Success("OK", "Asignación desactivada"));
         }
+
+
+        // GET: api/niveles/detalle?nivelId=1 (nivelId opcional)
+        [HttpGet("detalle")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<NivelDetalleResumenDto>>>> GetNivelesDetalle(
+            [FromQuery] int? nivelId = null)
+        {
+            var q = _db.NivelesDetalle
+                .AsNoTracking()
+                .Include(nd => nd.Nivel)
+                .Include(nd => nd.GradoSeccion)
+                .Where(nd => nd.Activo);
+
+            if (nivelId.HasValue)
+                q = q.Where(nd => nd.NivelId == nivelId.Value);
+
+            var list = await q
+                .OrderBy(nd => nd.Nivel.DescripcionNivel)
+                .ThenBy(nd => nd.GradoSeccion.DescripcionGrado)
+                .ThenBy(nd => nd.GradoSeccion.DescripcionSeccion)
+                .Select(nd => new NivelDetalleResumenDto
+                {
+                    NivelDetalleId = nd.Id,
+                    NivelId = nd.NivelId,
+                    NivelDescripcion = nd.Nivel.DescripcionNivel,
+                    Turno = nd.Nivel.DescripcionTurno,
+                    GradoSeccionId = nd.GradoSeccionId,
+                    GradoDescripcion = nd.GradoSeccion.DescripcionGrado,
+                    SeccionDescripcion = nd.GradoSeccion.DescripcionSeccion
+                })
+                .ToListAsync();
+
+            return Ok(ApiResponse<IEnumerable<NivelDetalleResumenDto>>.Success(list));
+        }
+
     }
 }
