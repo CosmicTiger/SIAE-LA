@@ -124,6 +124,20 @@ namespace SIAE_LA.Controllers
             return CreatedAtAction(nameof(GetNivelDetalleCurso), new { id = ndc.Id }, ApiResponse<NivelDetalleCursoReadDto>.Success(read, "Curso asignado al nivel"));
         }
 
+        [HttpGet("cursos")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<NivelDetalleCursoReadDto>>>> GetAllCursosNivel()
+        {
+            var list = await _db.NivelesDetalleCurso.ToListAsync();
+
+            var read = list.Select(ndc =>
+                new NivelDetalleCursoReadDto(ndc.Id, ndc.NivelDetalleId, ndc.CursoId, ndc.Activo, ndc.FechaRegistro)
+            );
+
+            return Ok(ApiResponse<IEnumerable<NivelDetalleCursoReadDto>>.Success(read));
+        }
+
+
         /// <summary>
         /// Obtener una asignación NivelDetalleCurso por id
         /// </summary>
@@ -184,6 +198,80 @@ namespace SIAE_LA.Controllers
 
             return Ok(ApiResponse<IEnumerable<NivelDetalleResumenDto>>.Success(list));
         }
+
+        // POST: api/niveles/detalle
+        // Crea un registro en nivel_detalle (Nivel + GradoSeccion)
+        [HttpPost("detalle")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
+        public async Task<ActionResult<ApiResponse<NivelDetalleResumenDto>>> CreateNivelDetalle(
+            [FromBody] NivelDetalleCreateDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<NivelDetalleResumenDto>.Fail(
+                    SIAE_LA.Utils.ModelStateHelper.BuildErrors(ModelState)));
+
+            // Validar que exista el nivel
+            var nivel = await _db.Niveles.FindAsync(dto.NivelId);
+            if (nivel is null)
+                return NotFound(ApiResponse<NivelDetalleResumenDto>.Fail("Nivel no encontrado"));
+
+            // Validar que exista el grado/sección
+            var grado = await _db.GradoSecciones.FindAsync(dto.GradoSeccionId);
+            if (grado is null)
+                return NotFound(ApiResponse<NivelDetalleResumenDto>.Fail("Grado/Sección no encontrado"));
+
+            // Evitar duplicados (mismo nivel + mismo grado/sección activos)
+            var exists = await _db.NivelesDetalle
+                .AnyAsync(nd => nd.NivelId == dto.NivelId
+                                && nd.GradoSeccionId == dto.GradoSeccionId
+                                && nd.Activo);
+            if (exists)
+                return Conflict(ApiResponse<NivelDetalleResumenDto>.Fail(
+                    "Ya existe un NivelDetalle para ese Nivel y Grado/Sección."));
+
+            // Crear entidad
+            var nd = new NivelDetalle
+            {
+                NivelId = dto.NivelId,
+                GradoSeccionId = dto.GradoSeccionId,
+                TotalVacantes = dto.TotalVacantes,   
+                VacantesOcupadas = 0,
+                Activo = true
+            };
+
+            _db.NivelesDetalle.Add(nd);
+            await _db.SaveChangesAsync();
+
+            // Cargar con includes para armar el resumen
+            var ndLoaded = await _db.NivelesDetalle
+                .AsNoTracking()
+                .Include(x => x.Nivel)
+                .Include(x => x.GradoSeccion)
+                .FirstOrDefaultAsync(x => x.Id == nd.Id);
+
+            if (ndLoaded is null)
+                return NotFound(ApiResponse<NivelDetalleResumenDto>.Fail("Error al cargar NivelDetalle creado."));
+
+            var resumen = new NivelDetalleResumenDto
+            {
+                NivelDetalleId = ndLoaded.Id,
+                NivelId = ndLoaded.NivelId,
+                NivelDescripcion = ndLoaded.Nivel.DescripcionNivel,
+                Turno = ndLoaded.Nivel.DescripcionTurno,
+                GradoSeccionId = ndLoaded.GradoSeccionId,
+                GradoDescripcion = ndLoaded.GradoSeccion.DescripcionGrado,
+                SeccionDescripcion = ndLoaded.GradoSeccion.DescripcionSeccion
+            };
+
+            return CreatedAtAction(
+                nameof(GetNivelesDetalle),
+                new { nivelId = ndLoaded.NivelId },
+                ApiResponse<NivelDetalleResumenDto>.Success(resumen, "NivelDetalle creado")
+            );
+        }
+
+
+
 
     }
 }

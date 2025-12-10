@@ -24,5 +24,11 @@
         public DateTime FechaRegistro { get; set; }
     }
 
+    public sealed class NivelDetalleCreateDto
+    {
+        public int NivelId { get; set; }
+        public int GradoSeccionId { get; set; }
 
+        public int? TotalVacantes { get; set; }
+    }
 }
