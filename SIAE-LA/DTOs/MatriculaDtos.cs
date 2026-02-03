@@ -16,11 +16,11 @@ namespace SIAE_LA.DTOs
     );
 
     // Nueva estructura: incluir detalle del NivelDetalle con Nivel y GradoSeccion
-    public record GradoSeccionDto(int Id, string DescripcionGrado, string DescripcionSeccion);
+    public record GradoSeccionDto(int Id, string DescripcionGrado, string DescripcionSeccion, bool activo, DateTime? FechaRegistro);
 
     public record NivelDto(int Id, string DescripcionNivel, string? DescripcionTurno, string? Horario);
 
-    public record NivelDetalleDto(
+    public record NivelDetalleResumenDto(
         int Id,
         int NivelId,
         NivelDto Nivel,
@@ -43,7 +43,7 @@ namespace SIAE_LA.DTOs
     public record MatriculaWithDetalleDto(
         int Id,
         AlumnoReadDto alumno,
-        NivelDetalleDto NivelDetalle,
+        NivelDetalleResumenDto NivelDetalle,
         PeriodoReadDto Periodo,
         TutorDto? Apoderado,
         string? Situacion,

@@ -58,6 +58,27 @@ namespace SIAE_LA.DTOs
         public int? VacantesOcupadas { get; set; }
     }
 
+    // DTO usado para actualizar vacantes y estado de un NivelDetalle
+    public class NivelDetalleVacantesUpdateDto
+    {
+        public int? TotalVacantes { get; set; }
+        public int? VacantesOcupadas { get; set; }
+        public bool? Activo { get; set; }
+    }
+
+    public class NivelDetalleVacantesAuditDto
+    {
+        public int NivelDetalleId { get; set; }
+        public int? OldTotalVacantes { get; set; }
+        public int? NewTotalVacantes { get; set; }
+        public int? OldVacantesOcupadas { get; set; }
+        public int? NewVacantesOcupadas { get; set; }
+        public bool? OldActivo { get; set; }
+        public bool? NewActivo { get; set; }
+        public string? ChangedByUserId { get; set; }
+        public DateTime ChangedAt { get; set; }
+    }
+
     // NivelDetalleCurso DTOs (asignación de cursos a nivelDetalle)
     public class NivelDetalleCursoCreateDto
     {

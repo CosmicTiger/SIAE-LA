@@ -21,7 +21,9 @@ namespace SIAE_LA.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<GradoSeccionDto>>>> GetAll()
         {
             var items = await _db.GradoSecciones.AsNoTracking().Where(g => g.Activo)
-                .Select(g => new GradoSeccionDto(g.Id, g.DescripcionGrado, g.DescripcionSeccion))
+                .OrderBy(g => g.DescripcionGrado)
+                .ThenBy(g => g.DescripcionSeccion)
+                .Select(g => new GradoSeccionDto(g.Id, g.DescripcionGrado, g.DescripcionSeccion, g.Activo, g.FechaRegistro))
                 .ToListAsync();
             return Ok(ApiResponse<IEnumerable<GradoSeccionDto>>.Success(items));
         }
@@ -31,7 +33,7 @@ namespace SIAE_LA.Controllers
         {
             var g = await _db.GradoSecciones.FindAsync(id);
             if (g is null) return NotFound(ApiResponse<GradoSeccionDto>.Fail("Grado no encontrado"));
-            return Ok(ApiResponse<GradoSeccionDto>.Success(new GradoSeccionDto(g.Id, g.DescripcionGrado, g.DescripcionSeccion)));
+            return Ok(ApiResponse<GradoSeccionDto>.Success(new GradoSeccionDto(g.Id, g.DescripcionGrado, g.DescripcionSeccion, g.Activo, g.FechaRegistro)));
         }
 
         [HttpPost]
@@ -39,12 +41,18 @@ namespace SIAE_LA.Controllers
         public async Task<ActionResult<ApiResponse<GradoSeccionDto>>> Create([FromBody] GradoSeccionCreateDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ApiResponse<GradoSeccionDto>.Fail(SIAE_LA.Utils.ModelStateHelper.BuildErrors(ModelState)));
-            var exists = await _db.GradoSecciones.AnyAsync(g => g.DescripcionGrado == dto.DescripcionGrado && g.DescripcionSeccion == dto.DescripcionSeccion);
-            if (exists) return Conflict(ApiResponse<GradoSeccionDto>.Fail("Ya existe un grado/sección con la misma descripción."));
-            var e = new GradoSeccion { DescripcionGrado = dto.DescripcionGrado, DescripcionSeccion = dto.DescripcionSeccion, Activo = true };
+            var grado = dto.DescripcionGrado?.Trim();
+            var seccion = dto.DescripcionSeccion?.Trim();
+            if (string.IsNullOrWhiteSpace(grado) || string.IsNullOrWhiteSpace(seccion))
+            {
+                return BadRequest(ApiResponse<GradoSeccionDto>.Fail("La descripción del grado y la sección son obligatorias."));
+            }
+            var exists = await _db.GradoSecciones.AnyAsync(g => g.DescripcionGrado == grado && g.DescripcionSeccion == seccion && g.Activo);
+            if (exists) return Conflict(ApiResponse<GradoSeccionDto>.Fail("Ya existe un grado/sección activo con la misma descripción."));
+            var e = new GradoSeccion { DescripcionGrado = grado, DescripcionSeccion = seccion, Activo = true };
             _db.GradoSecciones.Add(e);
             await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetOne), new { id = e.Id }, ApiResponse<GradoSeccionDto>.Success(new GradoSeccionDto(e.Id, e.DescripcionGrado, e.DescripcionSeccion), "Grado creado"));
+            return CreatedAtAction(nameof(GetOne), new { id = e.Id }, ApiResponse<GradoSeccionDto>.Success(new GradoSeccionDto(e.Id, e.DescripcionGrado, e.DescripcionSeccion, e.Activo, e.FechaRegistro), "Grado creado"));
         }
 
         [HttpPut("{id:int}")]
@@ -58,7 +66,7 @@ namespace SIAE_LA.Controllers
             e.DescripcionSeccion = dto.DescripcionSeccion;
             e.Activo = dto.Activo;
             await _db.SaveChangesAsync();
-            return Ok(ApiResponse<GradoSeccionDto>.Success(new GradoSeccionDto(e.Id, e.DescripcionGrado, e.DescripcionSeccion), "Grado actualizado"));
+            return Ok(ApiResponse<GradoSeccionDto>.Success(new GradoSeccionDto(e.Id, e.DescripcionGrado, e.DescripcionSeccion, e.Activo, e.FechaRegistro), "Grado actualizado"));
         }
 
         [HttpDelete("{id:int}")]

@@ -1,6 +1,6 @@
 ﻿namespace SIAE_LA.DTOs
 {
-    public sealed class NivelDetalleResumenDto
+    public sealed class NivelDetalleDto
     {
         public int NivelDetalleId { get; set; }
         public int NivelId { get; set; }
@@ -9,6 +9,10 @@
         public int GradoSeccionId { get; set; }
         public string GradoDescripcion { get; set; } = string.Empty;
         public string SeccionDescripcion { get; set; } = string.Empty;
+        public int? TotalVacantes { get; set; } = 0;
+        public int? VacantesOcupadas { get; set; } = 0;
+        public DateTime FechaRegistro { get; set; }
+        public bool activo { get; set; }
     }
 
     public sealed class NivelDetalleCursoDto

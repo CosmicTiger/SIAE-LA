@@ -332,7 +332,7 @@ namespace SIAE_LA.Controllers
             }
 
             var items = await query.OrderBy(g => g.DescripcionGrado).ThenBy(g => g.DescripcionSeccion)
-                .Select(g => new GradoSeccionDto(g.Id, g.DescripcionGrado, g.DescripcionSeccion))
+                .Select(g => new GradoSeccionDto(g.Id, g.DescripcionGrado, g.DescripcionSeccion, g.Activo, g.FechaRegistro))
                 .ToListAsync();
 
             return Ok(ApiResponse<IEnumerable<GradoSeccionDto>>.Success(items));

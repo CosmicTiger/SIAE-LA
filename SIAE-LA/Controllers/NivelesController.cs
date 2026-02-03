@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SIAE_LA.Abstractions;
+using Microsoft.AspNetCore.Identity;
 using SIAE_LA.DTOs;
 using SIAE_LA.Infrastructure.Persistence;
 using SIAE_LA.Domain.Entities;
@@ -15,7 +16,15 @@ namespace SIAE_LA.Controllers
     public sealed class NivelesController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
-        public NivelesController(ApplicationDbContext db) => _db = db;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ILogger<NivelesController> _logger;
+
+        public NivelesController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, ILogger<NivelesController> logger)
+        {
+            _db = db;
+            _userManager = userManager;
+            _logger = logger;
+        }
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<NivelReadDto>>>> GetAll()
@@ -82,7 +91,7 @@ namespace SIAE_LA.Controllers
                     where nd.NivelId == nivelId && nd.Activo
                     join gs in _db.GradoSecciones on nd.GradoSeccionId equals gs.Id
                     where gs.Activo
-                    select new GradoSeccionDto(gs.Id, gs.DescripcionGrado, gs.DescripcionSeccion);
+                    select new GradoSeccionDto(gs.Id, gs.DescripcionGrado, gs.DescripcionSeccion, gs.Activo, gs.FechaRegistro);
 
             var list = await q.Distinct().ToListAsync();
             return Ok(ApiResponse<IEnumerable<GradoSeccionDto>>.Success(list));
@@ -168,7 +177,7 @@ namespace SIAE_LA.Controllers
 
         // GET: api/niveles/detalle?nivelId=1 (nivelId opcional)
         [HttpGet("detalle")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<NivelDetalleResumenDto>>>> GetNivelesDetalle(
+        public async Task<ActionResult<ApiResponse<IEnumerable<NivelDetalleDto>>>> GetNivelesDetalle(
             [FromQuery] int? nivelId = null)
         {
             var q = _db.NivelesDetalle
@@ -184,41 +193,45 @@ namespace SIAE_LA.Controllers
                 .OrderBy(nd => nd.Nivel.DescripcionNivel)
                 .ThenBy(nd => nd.GradoSeccion.DescripcionGrado)
                 .ThenBy(nd => nd.GradoSeccion.DescripcionSeccion)
-                .Select(nd => new NivelDetalleResumenDto
+                .Select(nd => new NivelDetalleDto
                 {
                     NivelDetalleId = nd.Id,
                     NivelId = nd.NivelId,
                     NivelDescripcion = nd.Nivel.DescripcionNivel,
-                    Turno = nd.Nivel.DescripcionTurno,
+                    Turno = nd.Nivel.Horario ?? "N/A",
                     GradoSeccionId = nd.GradoSeccionId,
                     GradoDescripcion = nd.GradoSeccion.DescripcionGrado,
-                    SeccionDescripcion = nd.GradoSeccion.DescripcionSeccion
+                    SeccionDescripcion = nd.GradoSeccion.DescripcionSeccion,
+                    TotalVacantes = nd.TotalVacantes,
+                    VacantesOcupadas = nd.VacantesOcupadas,
+                    FechaRegistro = nd.FechaRegistro,
+                    activo = nd.Activo
                 })
                 .ToListAsync();
 
-            return Ok(ApiResponse<IEnumerable<NivelDetalleResumenDto>>.Success(list));
+            return Ok(ApiResponse<IEnumerable<NivelDetalleDto>>.Success(list));
         }
 
         // POST: api/niveles/detalle
         // Crea un registro en nivel_detalle (Nivel + GradoSeccion)
         [HttpPost("detalle")]
         [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
-        public async Task<ActionResult<ApiResponse<NivelDetalleResumenDto>>> CreateNivelDetalle(
+        public async Task<ActionResult<ApiResponse<NivelDetalleDto>>> CreateNivelDetalle(
             [FromBody] NivelDetalleCreateDto dto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ApiResponse<NivelDetalleResumenDto>.Fail(
+                return BadRequest(ApiResponse<NivelDetalleDto>.Fail(
                     SIAE_LA.Utils.ModelStateHelper.BuildErrors(ModelState)));
 
             // Validar que exista el nivel
             var nivel = await _db.Niveles.FindAsync(dto.NivelId);
             if (nivel is null)
-                return NotFound(ApiResponse<NivelDetalleResumenDto>.Fail("Nivel no encontrado"));
+                return NotFound(ApiResponse<NivelDetalleDto>.Fail("Nivel no encontrado"));
 
             // Validar que exista el grado/sección
             var grado = await _db.GradoSecciones.FindAsync(dto.GradoSeccionId);
             if (grado is null)
-                return NotFound(ApiResponse<NivelDetalleResumenDto>.Fail("Grado/Sección no encontrado"));
+                return NotFound(ApiResponse<NivelDetalleDto>.Fail("Grado/Sección no encontrado"));
 
             // Evitar duplicados (mismo nivel + mismo grado/sección activos)
             var exists = await _db.NivelesDetalle
@@ -226,7 +239,7 @@ namespace SIAE_LA.Controllers
                                 && nd.GradoSeccionId == dto.GradoSeccionId
                                 && nd.Activo);
             if (exists)
-                return Conflict(ApiResponse<NivelDetalleResumenDto>.Fail(
+                return Conflict(ApiResponse<NivelDetalleDto>.Fail(
                     "Ya existe un NivelDetalle para ese Nivel y Grado/Sección."));
 
             // Crear entidad
@@ -250,24 +263,108 @@ namespace SIAE_LA.Controllers
                 .FirstOrDefaultAsync(x => x.Id == nd.Id);
 
             if (ndLoaded is null)
-                return NotFound(ApiResponse<NivelDetalleResumenDto>.Fail("Error al cargar NivelDetalle creado."));
+                return NotFound(ApiResponse<NivelDetalleDto>.Fail("Error al cargar NivelDetalle creado."));
 
-            var resumen = new NivelDetalleResumenDto
+            var resumen = new NivelDetalleDto
             {
                 NivelDetalleId = ndLoaded.Id,
                 NivelId = ndLoaded.NivelId,
                 NivelDescripcion = ndLoaded.Nivel.DescripcionNivel,
-                Turno = ndLoaded.Nivel.DescripcionTurno,
+                Turno = ndLoaded.Nivel.Horario ?? "N/A",
                 GradoSeccionId = ndLoaded.GradoSeccionId,
                 GradoDescripcion = ndLoaded.GradoSeccion.DescripcionGrado,
-                SeccionDescripcion = ndLoaded.GradoSeccion.DescripcionSeccion
+                SeccionDescripcion = ndLoaded.GradoSeccion.DescripcionSeccion,
+                TotalVacantes = ndLoaded.TotalVacantes,
+                VacantesOcupadas = ndLoaded.VacantesOcupadas,
+                FechaRegistro = ndLoaded.FechaRegistro,
+                activo = ndLoaded.Activo
             };
 
             return CreatedAtAction(
                 nameof(GetNivelesDetalle),
                 new { nivelId = ndLoaded.NivelId },
-                ApiResponse<NivelDetalleResumenDto>.Success(resumen, "NivelDetalle creado")
+                ApiResponse<NivelDetalleDto>.Success(resumen, "NivelDetalle creado")
             );
+        }
+
+        /// <summary>
+        /// Actualiza vacantes y estado (activo) de un NivelDetalle
+        /// Roles: Admin, Direccion, Subdireccion, JefeArea
+        /// </summary>
+        [HttpPatch("detalle/{nivelDetalleId:int}/vacantes")]
+        [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
+        public async Task<ActionResult<ApiResponse<NivelDetalleDto>>> UpdateVacantes(int nivelDetalleId, [FromBody] NivelDetalleVacantesUpdateDto dto)
+        {
+            var nd = await _db.NivelesDetalle.FindAsync(nivelDetalleId);
+            if (nd is null) return NotFound(ApiResponse<NivelDetalleDto>.Fail("NivelDetalle no encontrado"));
+
+            // Guardar valores antiguos para auditoría
+            var oldTotal = nd.TotalVacantes;
+            var oldOcupadas = nd.VacantesOcupadas;
+            var oldActivo = nd.Activo;
+
+            if (dto.TotalVacantes.HasValue)
+                nd.TotalVacantes = dto.TotalVacantes.Value;
+
+            if (dto.VacantesOcupadas.HasValue)
+                nd.VacantesOcupadas = dto.VacantesOcupadas.Value;
+
+            if (dto.Activo.HasValue)
+                nd.Activo = dto.Activo.Value;
+
+            // Validación: vacantes ocupadas no puede exceder total (si ambos están presentes)
+            if (nd.TotalVacantes.HasValue && nd.VacantesOcupadas.HasValue && nd.VacantesOcupadas > nd.TotalVacantes)
+            {
+                return BadRequest(ApiResponse<NivelDetalleDto>.Fail("Vacantes ocupadas no puede ser mayor que el total de vacantes."));
+            }
+
+            await _db.SaveChangesAsync();
+
+            // Auditoría: registrar el cambio en logs y preparar DTO de auditoría
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var userId = user?.Id ?? "-";
+                var audit = new NivelDetalleVacantesAuditDto
+                {
+                    NivelDetalleId = nd.Id,
+                    OldTotalVacantes = oldTotal,
+                    NewTotalVacantes = nd.TotalVacantes,
+                    OldVacantesOcupadas = oldOcupadas,
+                    NewVacantesOcupadas = nd.VacantesOcupadas,
+                    OldActivo = oldActivo,
+                    NewActivo = nd.Activo,
+                    ChangedByUserId = userId,
+                    ChangedAt = DateTime.UtcNow
+                };
+
+                _logger.LogInformation("NivelDetalleVacantes updated: {@audit}", audit);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al registrar auditoría de NivelDetalleVacantes para id {Id}", nd.Id);
+            }
+
+            // Retornar el DTO actualizado
+            var loaded = await _db.NivelesDetalle.AsNoTracking().Include(x => x.Nivel).Include(x => x.GradoSeccion).FirstOrDefaultAsync(x => x.Id == nd.Id);
+            if (loaded is null) return NotFound(ApiResponse<NivelDetalleDto>.Fail("Error al cargar NivelDetalle actualizado"));
+
+            var resumen = new NivelDetalleDto
+            {
+                NivelDetalleId = loaded.Id,
+                NivelId = loaded.NivelId,
+                NivelDescripcion = loaded.Nivel.DescripcionNivel,
+                Turno = loaded.Nivel.Horario ?? "N/A",
+                GradoSeccionId = loaded.GradoSeccionId,
+                GradoDescripcion = loaded.GradoSeccion.DescripcionGrado,
+                SeccionDescripcion = loaded.GradoSeccion.DescripcionSeccion,
+                TotalVacantes = loaded.TotalVacantes,
+                VacantesOcupadas = loaded.VacantesOcupadas,
+                FechaRegistro = loaded.FechaRegistro,
+                activo = loaded.Activo
+            };
+
+            return Ok(ApiResponse<NivelDetalleDto>.Success(resumen, "NivelDetalle actualizado"));
         }
 
 

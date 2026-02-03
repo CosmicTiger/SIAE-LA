@@ -68,7 +68,7 @@ namespace SIAE_LA.Controllers
                         m.Alumno.Persona.Direccion,
                         m.Alumno.Activo
                     ),
-                    new NivelDetalleDto(
+                    new NivelDetalleResumenDto(
                         m.NivelDetalle.Id,
                         m.NivelDetalle.NivelId,
                         new NivelDto(
@@ -81,7 +81,9 @@ namespace SIAE_LA.Controllers
                         new GradoSeccionDto(
                             m.NivelDetalle.GradoSeccion.Id,
                             m.NivelDetalle.GradoSeccion.DescripcionGrado,
-                            m.NivelDetalle.GradoSeccion.DescripcionSeccion
+                            m.NivelDetalle.GradoSeccion.DescripcionSeccion,
+                            m.Activo,
+                            m.FechaRegistro
                         ),
                         m.NivelDetalle.TotalVacantes,
                         m.NivelDetalle.VacantesOcupadas
