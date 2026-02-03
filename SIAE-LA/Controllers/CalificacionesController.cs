@@ -1,14 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SIAE_LA.Abstractions;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using SIAE_LA.Domain.Entities;
 using SIAE_LA.DTOs;
 using SIAE_LA.Infrastructure.Persistence;
 
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace SIAE_LA.Controllers
 {
@@ -19,10 +20,13 @@ namespace SIAE_LA.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
-        public CalificacionesController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        private readonly ILogger<CalificacionesController> _logger;
+
+        public CalificacionesController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, ILogger<CalificacionesController> logger)
         {
             _db = db;
             _userManager = userManager;
+            _logger = logger;
         }
 
         /// <summary>
@@ -33,10 +37,22 @@ namespace SIAE_LA.Controllers
         [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea,Docente")]
         public async Task<ActionResult<ApiResponse<CalificacionReadDto>>> Crear([FromBody] CalificacionCreateDto dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<CalificacionReadDto>.Fail(SIAE_LA.Utils.ModelStateHelper.BuildErrors(ModelState)));
+
+            // Validar existencia de Curricula y Alumno para evitar violaciones FK
+            var curricula = await _db.Curriculas.FindAsync(dto.CurriculaId);
+            if (curricula is null) return NotFound(ApiResponse<CalificacionReadDto>.Fail("Currícula no encontrada"));
+
+            var alumnoExists = await _db.Alumnos.AnyAsync(a => a.Id == dto.AlumnoId);
+            if (!alumnoExists) return NotFound(ApiResponse<CalificacionReadDto>.Fail("Alumno no encontrado"));
+
+            // Validaciones de negocio
+            if (dto.Nota < 0 || dto.Nota > 100) return BadRequest(ApiResponse<CalificacionReadDto>.Fail("La nota debe estar entre 0 y 100"));
+
             // Regla de unicidad: (CurriculaId, AlumnoId)
             var exists = await _db.Calificaciones.AnyAsync(c => c.CurriculaId == dto.CurriculaId && c.AlumnoId == dto.AlumnoId);
             if (exists) return Conflict(ApiResponse<CalificacionReadDto>.Fail("Ya existe una calificación para este alumno en esta currícula."));
-
 
             var entity = new Calificacion
             {
@@ -46,7 +62,16 @@ namespace SIAE_LA.Controllers
                 Activo = true
             };
             _db.Calificaciones.Add(entity);
-            await _db.SaveChangesAsync();
+            try
+            {
+                await _db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger?.LogError(ex, "Error guardando calificación (CurriculaId={CurriculaId}, AlumnoId={AlumnoId})", dto.CurriculaId, dto.AlumnoId);
+                return StatusCode(500, ApiResponse<CalificacionReadDto>.Fail("Error al guardar la calificación. Ver logs para más detalles."));
+            }
+
             return Ok(ApiResponse<CalificacionReadDto>.Success(new(entity.Id, entity.CurriculaId, entity.AlumnoId, entity.Nota, entity.FechaRegistro, entity.Activo), "Calificación registrada"));
         }
 

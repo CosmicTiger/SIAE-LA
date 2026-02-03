@@ -207,5 +207,5 @@ await app.UseDataSeeder();
 
 // MAP CONTROLLERS: exigir autorización por defecto para controladores API
 // Esto hará que todos los endpoints de controllers requieran auten
-app.MapControllers().RequireAuthorization();
+app.MapControllers();
 app.Run();

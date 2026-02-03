@@ -301,17 +301,20 @@ namespace SIAE_LA.Controllers
                 .GroupBy(x => x.NivelDetalleId)
                 .Select(g => g.First());
 
-            var list = await q
-                .Select(x => new NivelResumenDto(
-                    x.NivelDetalleId,
-                    x.NivelId,
-                    x.NivelDescripcion,
-                    x.NivelTurno,
-                    x.GradoSeccionId,
-                    x.GradoDescripcion,
-                    x.SeccionDescripcion
-                ))
-                .ToListAsync();
+            var list = await _db.DocentesNivelDetalleCurso
+.AsNoTracking()
+.Where(a => a.DocenteId == docenteId && a.Activo)
+.GroupBy(a => a.NivelDetalleCurso.NivelDetalle.Id)
+.Select(g => g.Select(a => new NivelResumenDto(
+a.NivelDetalleCurso.NivelDetalle.Id,
+a.NivelDetalleCurso.NivelDetalle.NivelId,
+a.NivelDetalleCurso.NivelDetalle.Nivel.DescripcionNivel,
+a.NivelDetalleCurso.NivelDetalle.Nivel.DescripcionTurno,
+a.NivelDetalleCurso.NivelDetalle.GradoSeccionId,
+a.NivelDetalleCurso.NivelDetalle.GradoSeccion.DescripcionGrado,
+a.NivelDetalleCurso.NivelDetalle.GradoSeccion.DescripcionSeccion
+)).FirstOrDefault()!)
+    .ToListAsync();
 
             return Ok(ApiResponse<IEnumerable<NivelResumenDto>>.Success(list));
         }
