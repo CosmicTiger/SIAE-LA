@@ -17,13 +17,13 @@ DELETE /api/Cursos/{id} → desactivar (soft)
 
 
 POST /api/Matriculas → matricular (MatriculaCreateDto)
-GET /api/Matriculas/by-alumno/{alumnoId} → matrículas por alumno (opcional ?periodoId=)
-GET /api/Matriculas/by-nivel-detalle/{id} → matrículas por nivelDetalle (opcional ?periodoId=)
+GET /api/Matriculas/by-alumno/{alumnoId} → matrículas por alumno (opcional ?periodoId=, ahora también acepta ?anioLectivoId=; `anioLectivoId` tiene preferencia si se proporciona)
+GET /api/Matriculas/by-nivel-detalle/{id} → matrículas por nivelDetalle (opcional ?periodoId=, ahora también acepta ?anioLectivoId=; `anioLectivoId` tiene preferencia si se proporciona)
 
 
 POST /api/Calificaciones → crear (CalificacionCreateDto)
 PUT /api/Calificaciones/{id} → editar (CalificacionUpdateDto)
-GET /api/Calificaciones/by-alumno/{alumnoId} → por alumno (opcional ?periodoId=)
+GET /api/Calificaciones/by-alumno/{alumnoId} → por alumno (opcional ?periodoId=, ahora también acepta ?anioLectivoId=; `anioLectivoId` tiene preferencia si se proporciona)
 
 
 GET /api/Periodos → lista

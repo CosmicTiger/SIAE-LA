@@ -24,7 +24,7 @@ namespace SIAE_LA.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<PeriodoReadDto>>>> Get()
         {
             var items = await _db.Periodos.AsNoTracking().OrderByDescending(p => p.Id)
-            .Select(p => new PeriodoReadDto(p.Id, p.Descripcion, p.Activo)).ToListAsync();
+            .Select(p => new PeriodoReadDto(p.Id, p.Descripcion, p.Activo, null, null, null, null)).ToListAsync();
             return Ok(ApiResponse<IEnumerable<PeriodoReadDto>>.Success(items));
         }
 
@@ -37,7 +37,8 @@ namespace SIAE_LA.Controllers
             var e = new Domain.Entities.Periodo { Descripcion = dto.Descripcion, Activo = true };
             _db.Periodos.Add(e);
             await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(Get), new { id = e.Id }, ApiResponse<PeriodoReadDto>.Success(new(e.Id, e.Descripcion, e.Activo), "Período creado"));
+            var ai = SIAE_LA.Utils.AuditHelper.FromEntry(_db, e);
+            return CreatedAtAction(nameof(Get), new { id = e.Id }, ApiResponse<PeriodoReadDto>.Success(new(e.Id, e.Descripcion, e.Activo, ai.CreadoPor, ai.ModificadoPor, ai.FechaModificacion, ai.FechaIngreso), "Período creado"));
         }
 
         [HttpPut("{id:int}")]
@@ -50,7 +51,8 @@ namespace SIAE_LA.Controllers
             e.Descripcion = dto.Descripcion;
             e.Activo = dto.Activo;
             await _db.SaveChangesAsync();
-            return Ok(ApiResponse<PeriodoReadDto>.Success(new(e.Id, e.Descripcion, e.Activo), "Período actualizado"));
+            var ai2 = SIAE_LA.Utils.AuditHelper.FromEntry(_db, e);
+            return Ok(ApiResponse<PeriodoReadDto>.Success(new(e.Id, e.Descripcion, e.Activo, ai2.CreadoPor, ai2.ModificadoPor, ai2.FechaModificacion, ai2.FechaIngreso), "Período actualizado"));
         }
 
         [HttpDelete("{id:int}")]

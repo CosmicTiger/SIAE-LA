@@ -15,7 +15,6 @@ public class HorarioConfig : IEntityTypeConfiguration<Horario>
         b.Property(x => x.HoraInicio).HasColumnName("hora_inicio").IsRequired();
         b.Property(x => x.HoraFin).HasColumnName("hora_fin").IsRequired();
         b.Property(x => x.Activo).HasColumnName("activo");
-        b.Property(x => x.FechaRegistro).HasColumnName("fecha_registro").IsRequired();
 
         b.HasOne(x => x.NivelDetalleCurso)
          .WithMany(ndc => ndc.Horarios)

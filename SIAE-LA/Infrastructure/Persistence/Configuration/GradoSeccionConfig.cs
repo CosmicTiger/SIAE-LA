@@ -13,6 +13,5 @@ public class GradoSeccionConfig : IEntityTypeConfiguration<GradoSeccion>
         b.Property(x => x.DescripcionGrado).HasColumnName("descripcion_grado").HasMaxLength(50).IsRequired();
         b.Property(x => x.DescripcionSeccion).HasColumnName("descripcion_seccion").HasMaxLength(50).IsRequired();
         b.Property(x => x.Activo).HasColumnName("activo").IsRequired();
-        b.Property(x => x.FechaRegistro).HasColumnName("fecha_registro").IsRequired();
     }
 }

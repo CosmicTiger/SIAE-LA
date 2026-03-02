@@ -8,7 +8,11 @@ namespace SIAE_LA.DTOs
     int AlumnoId,
     decimal Nota,
     DateTime FechaRegistro,
-    bool Activo
+    bool Activo,
+    string? CreadoPor = null,
+    string? ModificadoPor = null,
+    DateTime? FechaModificacion = null,
+    DateTime? FechaIngreso = null
     );
 
 
@@ -17,6 +21,8 @@ namespace SIAE_LA.DTOs
         [Required] public int CurriculaId { get; set; }
         [Required] public int AlumnoId { get; set; }
         [Range(0, 100)] public decimal Nota { get; set; }
+        // Nuevo: periodo al que corresponde la nota
+        [Required] public int PeriodoId { get; set; }
     }
 
 

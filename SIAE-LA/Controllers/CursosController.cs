@@ -27,7 +27,7 @@ namespace SIAE_LA.Controllers
             }
             var total = await query.CountAsync();
             var items = await query.OrderBy(c => c.Descripcion).Skip(q.Skip).Take(q.Take)
-            .Select(c => new CursoReadDto(c.Id, c.Descripcion, c.Codigo, c.Activo))
+            .Select(c => new CursoReadDto(c.Id, c.Descripcion, c.Codigo, c.Activo, null, null, null, null))
             .ToListAsync();
             var page = new PaginationResult<CursoReadDto> { Page = q.Page, PageSize = q.PageSize, TotalItems = total, Items = items };
             return Ok(ApiResponse<PaginationResult<CursoReadDto>>.Success(page));
@@ -38,7 +38,7 @@ namespace SIAE_LA.Controllers
         {
             var c = await _db.Cursos.FindAsync(id);
             if (c is null) return NotFound(ApiResponse<CursoReadDto>.Fail("Curso no encontrado"));
-            return Ok(ApiResponse<CursoReadDto>.Success(new CursoReadDto(c.Id, c.Descripcion, c.Codigo, c.Activo)));
+            return Ok(ApiResponse<CursoReadDto>.Success(new CursoReadDto(c.Id, c.Descripcion, c.Codigo, c.Activo, null, null, null, null)));
         }
 
         [HttpPost]
@@ -51,7 +51,8 @@ namespace SIAE_LA.Controllers
             var e = new Domain.Entities.Curso { Descripcion = dto.Descripcion, Codigo = dto.Codigo, Activo = true };
             _db.Cursos.Add(e);
             await _db.SaveChangesAsync();
-            var read = new CursoReadDto(e.Id, e.Descripcion, e.Codigo, e.Activo);
+            var ai = SIAE_LA.Utils.AuditHelper.FromEntry(_db, e);
+            var read = new CursoReadDto(e.Id, e.Descripcion, e.Codigo, e.Activo, ai.CreadoPor, ai.ModificadoPor, ai.FechaModificacion, ai.FechaIngreso);
             return CreatedAtAction(nameof(GetOne), new { id = e.Id }, ApiResponse<CursoReadDto>.Success(read, "Curso creado"));
         }
 
@@ -64,7 +65,8 @@ namespace SIAE_LA.Controllers
             if (e is null) return NotFound(ApiResponse<CursoReadDto>.Fail("Curso no encontrado"));
             e.Descripcion = dto.Descripcion; e.Codigo = dto.Codigo; e.Activo = dto.Activo;
             await _db.SaveChangesAsync();
-            return Ok(ApiResponse<CursoReadDto>.Success(new(e.Id, e.Descripcion, e.Codigo, e.Activo), "Curso actualizado"));
+            var ai2 = SIAE_LA.Utils.AuditHelper.FromEntry(_db, e);
+            return Ok(ApiResponse<CursoReadDto>.Success(new(e.Id, e.Descripcion, e.Codigo, e.Activo, ai2.CreadoPor, ai2.ModificadoPor, ai2.FechaModificacion, ai2.FechaIngreso), "Curso actualizado"));
         }
 
         [HttpDelete("{id:int}")]

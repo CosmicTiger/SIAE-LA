@@ -89,7 +89,7 @@ namespace SIAE_LA.Controllers
                     join ndc in _db.NivelesDetalleCurso on nd.Id equals ndc.NivelDetalleId
                     join c in _db.Cursos on ndc.CursoId equals c.Id
                     where ndc.Activo && c.Activo
-                    select new DTOs.CursoReadDto(c.Id, c.Descripcion, c.Codigo, c.Activo);
+                    select new DTOs.CursoReadDto(c.Id, c.Descripcion, c.Codigo, c.Activo, null, null, null, null);
 
             var list = await q.Distinct().ToListAsync();
             return Ok(ApiResponse<IEnumerable<DTOs.CursoReadDto>>.Success(list));

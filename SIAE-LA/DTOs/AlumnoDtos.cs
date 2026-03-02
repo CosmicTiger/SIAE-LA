@@ -58,5 +58,5 @@
     }
 
     // DTO para devolver horarios por alumno
-    public sealed record StudentHorarioDto(int AlumnoId, IEnumerable<HorarioReadDto> Horarios);
+    public sealed record StudentHorarioDto(int AlumnoId, IEnumerable<HorarioDto> Horarios);
 }

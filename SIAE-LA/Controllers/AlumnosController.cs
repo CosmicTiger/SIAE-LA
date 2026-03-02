@@ -269,7 +269,7 @@ namespace SIAE_LA.Controllers
                         .Select(m => new
                         {
                             MatriculaId = m.Id,
-                            m.PeriodoId,
+                            AnioLectivoId = m.AnioLectivoId,
                             m.Situacion,
                             m.EsRepitente,
                             m.ApoderadoId,
@@ -324,7 +324,7 @@ namespace SIAE_LA.Controllers
                 matriculaDto = new MatriculaResumenDto(
                     item.Matricula.MatriculaId,
                     nivelResumen,
-                    item.Matricula.PeriodoId,
+                    item.Matricula.AnioLectivoId,
                     item.Matricula.Situacion,
                     item.Matricula.EsRepitente,
                     item.Matricula.ApoderadoId,
@@ -442,15 +442,24 @@ namespace SIAE_LA.Controllers
                 if (periodoId is not null)
                 {
                     var pid = periodoId.Value;
-                    q = from c in q
-                        join cur in _db.Curriculas on c.CurriculaId equals cur.Id
-                        join dndc in _db.DocentesNivelDetalleCurso on cur.DocenteNivelDetalleCursoId equals dndc.Id
-                        join ndc in _db.NivelesDetalleCurso on dndc.NivelDetalleCursoId equals ndc.Id
-                        join nd in _db.NivelesDetalle on ndc.NivelDetalleId equals nd.Id
-                        join m in _db.Matriculas on new { c.AlumnoId, nd.Id, PeriodoId = pid } equals new { m.AlumnoId, Id = m.NivelDetalleId, m.PeriodoId }
-                        select c;
+                    var periodo = await _db.Periodos.AsNoTracking().FirstOrDefaultAsync(p => p.Id == pid);
+                    if (periodo is not null && periodo.AnioLectivoId is not null)
+                    {
+                        var anio = periodo.AnioLectivoId.Value;
+                        q = from c in q
+                            join cur in _db.Curriculas on c.CurriculaId equals cur.Id
+                            join dndc in _db.DocentesNivelDetalleCurso on cur.DocenteNivelDetalleCursoId equals dndc.Id
+                            join ndc in _db.NivelesDetalleCurso on dndc.NivelDetalleCursoId equals ndc.Id
+                            join nd in _db.NivelesDetalle on ndc.NivelDetalleId equals nd.Id
+                            join m in _db.Matriculas on new { c.AlumnoId, Id = nd.Id, AnioLectivoId = (int?)anio } equals new { m.AlumnoId, Id = m.NivelDetalleId, AnioLectivoId = m.AnioLectivoId }
+                            select c;
+                    }
+                    else
+                    {
+                        q = _db.Calificaciones.Where(c => false);
+                    }
                 }
-                var listTutor = await q.OrderByDescending(c => c.FechaRegistro).Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo)).ToListAsync();
+                var listTutor = await q.OrderByDescending(c => c.FechaRegistro).Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo, null, null, null, null)).ToListAsync();
                 return Ok(ApiResponse<IEnumerable<CalificacionReadDto>>.Success(listTutor));
             }
             else
@@ -463,15 +472,24 @@ namespace SIAE_LA.Controllers
             if (periodoId is not null)
             {
                 var pid = periodoId.Value;
-                q2 = from c in q2
-                     join cur in _db.Curriculas on c.CurriculaId equals cur.Id
-                     join dndc in _db.DocentesNivelDetalleCurso on cur.DocenteNivelDetalleCursoId equals dndc.Id
-                     join ndc in _db.NivelesDetalleCurso on dndc.NivelDetalleCursoId equals ndc.Id
-                     join nd in _db.NivelesDetalle on ndc.NivelDetalleId equals nd.Id
-                     join m in _db.Matriculas on new { c.AlumnoId, nd.Id, PeriodoId = pid } equals new { m.AlumnoId, Id = m.NivelDetalleId, m.PeriodoId }
-                     select c;
+                var periodo = await _db.Periodos.AsNoTracking().FirstOrDefaultAsync(p => p.Id == pid);
+                if (periodo is not null && periodo.AnioLectivoId is not null)
+                {
+                    var anio = periodo.AnioLectivoId.Value;
+                    q2 = from c in q2
+                         join cur in _db.Curriculas on c.CurriculaId equals cur.Id
+                         join dndc in _db.DocentesNivelDetalleCurso on cur.DocenteNivelDetalleCursoId equals dndc.Id
+                         join ndc in _db.NivelesDetalleCurso on dndc.NivelDetalleCursoId equals ndc.Id
+                         join nd in _db.NivelesDetalle on ndc.NivelDetalleId equals nd.Id
+                         join m in _db.Matriculas on new { c.AlumnoId, Id = nd.Id, AnioLectivoId = (int?)anio } equals new { m.AlumnoId, Id = m.NivelDetalleId, AnioLectivoId = m.AnioLectivoId }
+                         select c;
+                }
+                else
+                {
+                    q2 = _db.Calificaciones.Where(c => false);
+                }
             }
-            var result = await q2.OrderByDescending(c => c.FechaRegistro).Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo)).ToListAsync();
+            var result = await q2.OrderByDescending(c => c.FechaRegistro).Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo, null, null, null, null)).ToListAsync();
             return Ok(ApiResponse<IEnumerable<CalificacionReadDto>>.Success(result));
         }
 

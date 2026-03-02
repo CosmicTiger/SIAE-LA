@@ -19,11 +19,11 @@ public class MatriculaConfig : IEntityTypeConfiguration<Matricula>
         b.Property(x => x.ApoderadoId).HasColumnName("apoderado_id");
         b.Property(x => x.InstitucionProcedencia).HasColumnName("institucion_procedencia");
         b.Property(x => x.EsRepitente).HasColumnName("es_repitente");
-        b.Property(x => x.PeriodoId).HasColumnName("periodo_id");
+        // La matrícula se asocia al Año lectivo; eliminamos mapeo/FK a Periodo
+        b.Property(x => x.AnioLectivoId).HasColumnName("anio_lectivo_id");
         b.Property(x => x.Activo).HasColumnName("activo");
-        b.Property(x => x.FechaRegistro).HasColumnName("fecha_registro");
 
-        b.HasIndex(x => new { x.AlumnoId, x.NivelDetalleId, x.PeriodoId }).IsUnique();
+        b.HasIndex(x => new { x.AlumnoId, x.NivelDetalleId, x.AnioLectivoId }).IsUnique();
 
         b.HasOne(x => x.Alumno)
          .WithMany(a => a.Matriculas)
@@ -40,9 +40,7 @@ public class MatriculaConfig : IEntityTypeConfiguration<Matricula>
          .HasForeignKey(x => x.ApoderadoId)
          .OnDelete(DeleteBehavior.SetNull);
 
-        b.HasOne(x => x.Periodo)
-         .WithMany()
-         .HasForeignKey(x => x.PeriodoId)
-         .OnDelete(DeleteBehavior.Restrict);
+        // relación opcional a Año Lectivo
+        b.HasOne(x => x.AnioLectivo).WithMany(a => a.Matriculas).HasForeignKey(x => x.AnioLectivoId).OnDelete(DeleteBehavior.Restrict);
     }
 }

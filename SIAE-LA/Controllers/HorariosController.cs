@@ -19,26 +19,27 @@ namespace SIAE_LA.Controllers
 
         [HttpGet]
         [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea,Docente,Estudiante,Tutor")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<HorarioReadDto>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<HorarioDto>>>> GetAll()
         {
             var items = await _db.Horarios.AsNoTracking()
-                .Select(h => new HorarioReadDto(h.Id, h.NivelDetalleCursoId, h.DiaSemana, h.HoraInicio, h.HoraFin, h.Activo, h.FechaRegistro))
+                .Select(h => new HorarioDto(h.Id, h.NivelDetalleCursoId, h.DiaSemana, h.HoraInicio, h.HoraFin, h.Activo, h.FechaRegistro, null, null, null, null))
                 .ToListAsync();
-            return Ok(ApiResponse<IEnumerable<HorarioReadDto>>.Success(items));
+            return Ok(ApiResponse<IEnumerable<HorarioDto>>.Success(items));
         }
 
         [HttpGet("{id:int}")]
         [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea,Docente,Estudiante,Tutor")]
-        public async Task<ActionResult<ApiResponse<HorarioReadDto>>> GetOne(int id)
+        public async Task<ActionResult<ApiResponse<HorarioDto>>> GetOne(int id)
         {
             var h = await _db.Horarios.FindAsync(id);
             if (h is null) return NotFound(ApiResponse<HorarioReadDto>.Fail("Horario no encontrado"));
-            return Ok(ApiResponse<HorarioReadDto>.Success(new HorarioReadDto(h.Id, h.NivelDetalleCursoId, h.DiaSemana, h.HoraInicio, h.HoraFin, h.Activo, h.FechaRegistro)));
+            var ai = SIAE_LA.Utils.AuditHelper.FromEntry(_db, h);
+            return Ok(ApiResponse<HorarioDto>.Success(new HorarioDto(h.Id, h.NivelDetalleCursoId, h.DiaSemana, h.HoraInicio, h.HoraFin, h.Activo, h.FechaRegistro, ai.CreadoPor, ai.ModificadoPor, ai.FechaModificacion, ai.FechaIngreso)));
         }
 
         [HttpPost]
         [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
-        public async Task<ActionResult<ApiResponse<HorarioReadDto>>> Create([FromBody] HorarioCreateDto dto)
+        public async Task<ActionResult<ApiResponse<HorarioDto>>> Create([FromBody] HorarioCreateInputDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ApiResponse<HorarioReadDto>.Fail(SIAE_LA.Utils.ModelStateHelper.BuildErrors(ModelState)));
             // Validar que NivelDetalleCurso exista
@@ -48,12 +49,13 @@ namespace SIAE_LA.Controllers
             var h = new Horario { NivelDetalleCursoId = dto.NivelDetalleCursoId, DiaSemana = dto.DiaSemana, HoraInicio = dto.HoraInicio, HoraFin = dto.HoraFin, Activo = true };
             _db.Horarios.Add(h);
             await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetOne), new { id = h.Id }, ApiResponse<HorarioReadDto>.Success(new HorarioReadDto(h.Id, h.NivelDetalleCursoId, h.DiaSemana, h.HoraInicio, h.HoraFin, h.Activo, h.FechaRegistro), "Horario creado"));
+            var ai2 = SIAE_LA.Utils.AuditHelper.FromEntry(_db, h);
+            return CreatedAtAction(nameof(GetOne), new { id = h.Id }, ApiResponse<HorarioDto>.Success(new HorarioDto(h.Id, h.NivelDetalleCursoId, h.DiaSemana, h.HoraInicio, h.HoraFin, h.Activo, h.FechaRegistro, ai2.CreadoPor, ai2.ModificadoPor, ai2.FechaModificacion, ai2.FechaIngreso), "Horario creado"));
         }
 
         [HttpPut("{id:int}")]
         [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
-        public async Task<ActionResult<ApiResponse<HorarioReadDto>>> Update(int id, [FromBody] HorarioUpdateDto dto)
+        public async Task<ActionResult<ApiResponse<HorarioDto>>> Update(int id, [FromBody] HorarioUpdateInputDto dto)
         {
             var h = await _db.Horarios.FindAsync(id);
             if (h is null) return NotFound(ApiResponse<HorarioReadDto>.Fail("Horario no encontrado"));
@@ -62,7 +64,8 @@ namespace SIAE_LA.Controllers
             h.HoraFin = dto.HoraFin;
             h.Activo = dto.Activo;
             await _db.SaveChangesAsync();
-            return Ok(ApiResponse<HorarioReadDto>.Success(new HorarioReadDto(h.Id, h.NivelDetalleCursoId, h.DiaSemana, h.HoraInicio, h.HoraFin, h.Activo, h.FechaRegistro), "Horario actualizado"));
+            var ai3 = SIAE_LA.Utils.AuditHelper.FromEntry(_db, h);
+            return Ok(ApiResponse<HorarioDto>.Success(new HorarioDto(h.Id, h.NivelDetalleCursoId, h.DiaSemana, h.HoraInicio, h.HoraFin, h.Activo, h.FechaRegistro, ai3.CreadoPor, ai3.ModificadoPor, ai3.FechaModificacion, ai3.FechaIngreso), "Horario actualizado"));
         }
 
         [HttpDelete("{id:int}")]
@@ -79,7 +82,7 @@ namespace SIAE_LA.Controllers
         // AsignarHorario (crea horario para nivel_detalle_curso)
         [HttpPost("asignar")]
         [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea")]
-        public async Task<ActionResult<ApiResponse<HorarioReadDto>>> AsignarHorario([FromBody] HorarioCreateDto dto)
+        public async Task<ActionResult<ApiResponse<HorarioDto>>> AsignarHorario([FromBody] HorarioCreateInputDto dto)
         {
             // reusar Create
             return await Create(dto);

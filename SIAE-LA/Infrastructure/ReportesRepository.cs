@@ -20,14 +20,22 @@ namespace SIAE_LA.Infrastructure
         public async IAsyncEnumerable<Dictionary<string, object>> GetReporteAlumnoAsync(int? periodoId = null, int? nivelDetalleId = null, int? cursoId = null)
         {
             // Query: listar alumnos con matrícula y calificaciones por filtros
+            int? periodoAnioId = null;
+            if (periodoId is not null)
+            {
+                var perFilter = await _db.Periodos.AsNoTracking().FirstOrDefaultAsync(p => p.Id == periodoId.Value);
+                if (perFilter is null) yield break; // no matching periodo -> empty
+                periodoAnioId = perFilter.AnioLectivoId;
+                if (periodoAnioId is null) yield break;
+            }
+
             var q = from m in _db.Matriculas.AsNoTracking()
                     join a in _db.Alumnos on m.AlumnoId equals a.Id
                     join p in _db.Personas on a.PersonaId equals p.Id
                     join nd in _db.NivelesDetalle on m.NivelDetalleId equals nd.Id
-                    join per in _db.Periodos on m.PeriodoId equals per.Id
-                    select new { m, a, p, nd, per };
+                    select new { m, a, p, nd };
 
-            if (periodoId is not null) q = q.Where(x => x.m.PeriodoId == periodoId.Value);
+            if (periodoAnioId is not null) q = q.Where(x => x.m.AnioLectivoId == periodoAnioId.Value);
             if (nivelDetalleId is not null) q = q.Where(x => x.m.NivelDetalleId == nivelDetalleId.Value);
 
             var queryable = q.OrderBy(x => x.p.Apellidos).ThenBy(x => x.p.Nombres)
@@ -38,7 +46,7 @@ namespace SIAE_LA.Infrastructure
                     Apellidos = x.p.Apellidos,
                     Documento = x.p.DocumentoIdentidad,
                     NivelDetalleId = x.nd.Id,
-                    Periodo = x.per.Descripcion,
+                    Periodo = _db.Periodos.Where(pp => pp.AnioLectivoId == x.m.AnioLectivoId).OrderBy(pp => pp.Orden).Select(pp => pp.Descripcion).FirstOrDefault(),
                     MatriculaId = x.m.Id,
                     FechaMatricula = x.m.FechaRegistro
                 }).AsAsyncEnumerable();

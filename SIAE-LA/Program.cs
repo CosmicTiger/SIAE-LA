@@ -144,6 +144,9 @@ builder.Services
 // Servicios propios
 builder.Services.AddScoped<ITokenService>(sp => new TokenService(issuer, audience, key, minutes));
 
+// HttpContext accessor required for audit handling in ApplicationDbContext
+builder.Services.AddHttpContextAccessor();
+
 // Controllers
 builder.Services.AddControllers();
 
@@ -178,6 +181,8 @@ builder.Services.AddSwaggerGen(c =>
     {
         { new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } }, Array.Empty<string>() }
     });
+    // Operation filter to add descriptions for periodoId / anioLectivoId and note about precedence
+    c.OperationFilter<SIAE_LA.Infrastructure.Swagger.PeriodoAnioOperationFilter>();
 });
 
 var app = builder.Build();

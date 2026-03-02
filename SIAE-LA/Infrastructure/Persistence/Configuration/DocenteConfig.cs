@@ -14,6 +14,5 @@ public class DocenteConfig : IEntityTypeConfiguration<Docente>
         b.Property(x => x.PersonaId).HasColumnName("persona_id");
         b.Property(x => x.GradoEstudio).HasColumnName("grado_estudio").HasMaxLength(100);
         b.Property(x => x.Activo).HasColumnName("activo");
-        b.Property(x => x.FechaRegistro).HasColumnName("fecha_registro");
     }
 }

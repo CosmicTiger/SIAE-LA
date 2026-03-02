@@ -12,6 +12,9 @@
         public int? TotalVacantes { get; set; } = 0;
         public int? VacantesOcupadas { get; set; } = 0;
         public DateTime FechaRegistro { get; set; }
+        public string? CreadoPor { get; set; }
+        public string? ModificadoPor { get; set; }
+        public DateTime? FechaModificacion { get; set; }
         public bool activo { get; set; }
     }
 

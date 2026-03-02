@@ -15,7 +15,6 @@ public class NivelDetalleConfig : IEntityTypeConfiguration<NivelDetalle>
         b.Property(x => x.TotalVacantes).HasColumnName("total_vacantes");
         b.Property(x => x.VacantesOcupadas).HasColumnName("vacantes_ocupadas");
         b.Property(x => x.Activo).HasColumnName("activo");
-        b.Property(x => x.FechaRegistro).HasColumnName("fecha_registro").IsRequired();
 
         b.HasIndex(x => new { x.NivelId, x.GradoSeccionId }).IsUnique();
 

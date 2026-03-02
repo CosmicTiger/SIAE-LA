@@ -40,12 +40,36 @@ namespace SIAE_LA.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<CalificacionReadDto>.Fail(SIAE_LA.Utils.ModelStateHelper.BuildErrors(ModelState)));
 
-            // Validar existencia de Curricula y Alumno para evitar violaciones FK
-            var curricula = await _db.Curriculas.FindAsync(dto.CurriculaId);
+            // Validar existencia de Curricula (incluyendo asignación docente->niveldetallecurso)
+            var curricula = await _db.Curriculas
+                .AsNoTracking()
+                .Include(c => c.DocenteNivelDetalleCurso)
+                    .ThenInclude(d => d.NivelDetalleCurso)
+                .FirstOrDefaultAsync(c => c.Id == dto.CurriculaId);
             if (curricula is null) return NotFound(ApiResponse<CalificacionReadDto>.Fail("Currícula no encontrada"));
 
             var alumnoExists = await _db.Alumnos.AnyAsync(a => a.Id == dto.AlumnoId);
             if (!alumnoExists) return NotFound(ApiResponse<CalificacionReadDto>.Fail("Alumno no encontrado"));
+
+            // Validar Periodo y coherencia con la matrícula del alumno
+            var periodo = await _db.Periodos.FindAsync(dto.PeriodoId);
+            if (periodo is null) return NotFound(ApiResponse<CalificacionReadDto>.Fail("Período no encontrado"));
+
+            // Determinar el NivelDetalleId asociado a la currícula a través de DocenteNivelDetalleCurso -> NivelDetalleCurso
+            if (curricula.DocenteNivelDetalleCurso is null || curricula.DocenteNivelDetalleCurso.NivelDetalleCurso is null)
+                return BadRequest(ApiResponse<CalificacionReadDto>.Fail("La currícula no tiene asignación de nivel/curso válida."));
+
+            var nivelDetalleId = curricula.DocenteNivelDetalleCurso.NivelDetalleCurso.NivelDetalleId;
+
+            // Asegurar que el alumno está matriculado en el año lectivo del periodo (si existe asignación)
+            var matricula = await _db.Matriculas.AsNoTracking().FirstOrDefaultAsync(m => m.AlumnoId == dto.AlumnoId && m.NivelDetalleId == nivelDetalleId && m.AnioLectivoId == periodo.AnioLectivoId);
+            if (matricula is null)
+            {
+                // Fallback: permitir si existe alguna matrícula del alumno en el mismo año lectivo
+                var any = await _db.Matriculas.AnyAsync(m => m.AlumnoId == dto.AlumnoId && m.AnioLectivoId == periodo.AnioLectivoId);
+                if (!any)
+                    return BadRequest(ApiResponse<CalificacionReadDto>.Fail("El alumno no está matriculado en el año lectivo correspondiente para esta currícula."));
+            }
 
             // Validaciones de negocio
             if (dto.Nota < 0 || dto.Nota > 100) return BadRequest(ApiResponse<CalificacionReadDto>.Fail("La nota debe estar entre 0 y 100"));
@@ -58,6 +82,7 @@ namespace SIAE_LA.Controllers
             {
                 CurriculaId = dto.CurriculaId,
                 AlumnoId = dto.AlumnoId,
+                PeriodoId = dto.PeriodoId,
                 Nota = dto.Nota,
                 Activo = true
             };
@@ -72,7 +97,8 @@ namespace SIAE_LA.Controllers
                 return StatusCode(500, ApiResponse<CalificacionReadDto>.Fail("Error al guardar la calificación. Ver logs para más detalles."));
             }
 
-            return Ok(ApiResponse<CalificacionReadDto>.Success(new(entity.Id, entity.CurriculaId, entity.AlumnoId, entity.Nota, entity.FechaRegistro, entity.Activo), "Calificación registrada"));
+            var ai = SIAE_LA.Utils.AuditHelper.FromEntry(_db, entity);
+            return Ok(ApiResponse<CalificacionReadDto>.Success(new CalificacionReadDto(entity.Id, entity.CurriculaId, entity.AlumnoId, entity.Nota, entity.FechaRegistro, entity.Activo, ai.CreadoPor, ai.ModificadoPor, ai.FechaModificacion, ai.FechaIngreso), "Calificación registrada"));
         }
 
         /// <summary>
@@ -87,7 +113,8 @@ namespace SIAE_LA.Controllers
             if (c is null) return NotFound(ApiResponse<CalificacionReadDto>.Fail("No existe la calificación"));
             c.Nota = dto.Nota; c.Activo = dto.Activo;
             await _db.SaveChangesAsync();
-            return Ok(ApiResponse<CalificacionReadDto>.Success(new(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo), "Calificación actualizada"));
+            var ai2 = SIAE_LA.Utils.AuditHelper.FromEntry(_db, c);
+            return Ok(ApiResponse<CalificacionReadDto>.Success(new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo, ai2.CreadoPor, ai2.ModificadoPor, ai2.FechaModificacion, ai2.FechaIngreso), "Calificación actualizada"));
         }
 
         /// <summary>
@@ -99,7 +126,7 @@ namespace SIAE_LA.Controllers
         /// </summary>
         [HttpGet("by-alumno/{alumnoId:int}")]
         [Authorize(Roles = "Admin,Direccion,Subdireccion,JefeArea,Docente,Estudiante,Tutor")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<CalificacionReadDto>>>> PorAlumno(int alumnoId, [FromQuery] int? periodoId)
+        public async Task<ActionResult<ApiResponse<IEnumerable<CalificacionReadDto>>>> PorAlumno(int alumnoId, [FromQuery] int? periodoId, [FromQuery] int? anioLectivoId)
         {
             // Control de acceso para Estudiante/Tutor
             var user = await _userManager.GetUserAsync(User);
@@ -122,18 +149,28 @@ namespace SIAE_LA.Controllers
             var q = _db.Calificaciones.AsNoTracking().Where(c => c.AlumnoId == alumnoId);
             if (periodoId is not null)
             {
-                q = from c in _db.Calificaciones.AsNoTracking()
-                    join cur in _db.Curriculas on c.CurriculaId equals cur.Id
-                    join dndc in _db.DocentesNivelDetalleCurso on cur.DocenteNivelDetalleCursoId equals dndc.Id
-                    join ndc in _db.NivelesDetalleCurso on dndc.NivelDetalleCursoId equals ndc.Id
-                    join nd in _db.NivelesDetalle on ndc.NivelDetalleId equals nd.Id
-                    join m in _db.Matriculas on new { c.AlumnoId, nd.Id, PeriodoId = periodoId.Value } equals new { m.AlumnoId, Id = m.NivelDetalleId, m.PeriodoId }
-                    where c.AlumnoId == alumnoId
-                    select c;
+                var periodo = await _db.Periodos.AsNoTracking().FirstOrDefaultAsync(p => p.Id == periodoId.Value);
+                if (periodo is not null && periodo.AnioLectivoId is not null)
+                {
+                    var anioId = periodo.AnioLectivoId.Value;
+                    q = from c in _db.Calificaciones.AsNoTracking()
+                        join cur in _db.Curriculas on c.CurriculaId equals cur.Id
+                        join dndc in _db.DocentesNivelDetalleCurso on cur.DocenteNivelDetalleCursoId equals dndc.Id
+                        join ndc in _db.NivelesDetalleCurso on dndc.NivelDetalleCursoId equals ndc.Id
+                        join nd in _db.NivelesDetalle on ndc.NivelDetalleId equals nd.Id
+                        join m in _db.Matriculas on new { c.AlumnoId, Id = nd.Id, AnioLectivoId = (int?)anioId } equals new { m.AlumnoId, Id = m.NivelDetalleId, AnioLectivoId = m.AnioLectivoId }
+                        where c.AlumnoId == alumnoId
+                        select c;
+                }
+                else
+                {
+                    // periodo not found or not linked to anio lectivo -> no results
+                    q = _db.Calificaciones.Where(c => false);
+                }
             }
 
             var list = await q.OrderByDescending(c => c.FechaRegistro)
-                .Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo))
+                .Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo, null, null, null, null))
                 .ToListAsync();
             return Ok(ApiResponse<IEnumerable<CalificacionReadDto>>.Success(list));
         }

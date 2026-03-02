@@ -142,11 +142,16 @@ namespace SIAE_LA.Controllers
             if (periodoId.HasValue)
             {
                 var pid = periodoId.Value;
-                q = q.Where(c => _db.Matriculas.Any(m => m.AlumnoId == c.AlumnoId && m.NivelDetalleId == c.Curricula.DocenteNivelDetalleCurso.NivelDetalleCurso.NivelDetalleId && m.PeriodoId == pid));
+                var per = await _db.Periodos.AsNoTracking().FirstOrDefaultAsync(p => p.Id == pid);
+                if (per != null && per.AnioLectivoId != null)
+                {
+                    var ay = per.AnioLectivoId.Value;
+                    q = q.Where(c => _db.Matriculas.Any(m => m.AlumnoId == c.AlumnoId && m.NivelDetalleId == c.Curricula.DocenteNivelDetalleCurso.NivelDetalleCurso.NivelDetalleId && m.AnioLectivoId == ay));
+                }
             }
 
             var list = await q.OrderByDescending(c => c.FechaRegistro)
-                .Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo))
+                .Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo, null, null, null, null))
                 .ToListAsync();
 
             return Ok(ApiResponse<IEnumerable<CalificacionReadDto>>.Success(list));
@@ -208,7 +213,7 @@ namespace SIAE_LA.Controllers
                 await tx.CommitAsync();
 
                 // construir DTOs de salida
-                var outList = processed.Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo)).ToList();
+                var outList = processed.Select(c => new CalificacionReadDto(c.Id, c.CurriculaId, c.AlumnoId, c.Nota, c.FechaRegistro, c.Activo, null, null, null, null)).ToList();
                 return Ok(ApiResponse<IEnumerable<CalificacionReadDto>>.Success(outList, "Notas guardadas"));
             }
             catch
@@ -373,7 +378,7 @@ a.NivelDetalleCurso.NivelDetalle.GradoSeccion.DescripcionSeccion
                 }
 
                 var listCursos = await cursosQ.OrderBy(c => c.Descripcion)
-                    .Select(c => new CursoReadDto(c.Id, c.Descripcion, c.Codigo, c.Activo))
+                    .Select(c => new CursoReadDto(c.Id, c.Descripcion, c.Codigo, c.Activo, null, null, null, null))
                     .ToListAsync();
 
                 return Ok(ApiResponse<IEnumerable<CursoReadDto>>.Success(listCursos));
@@ -388,7 +393,7 @@ a.NivelDetalleCurso.NivelDetalle.GradoSeccion.DescripcionSeccion
             }
 
             var items = await query.OrderBy(c => c.Descripcion)
-                .Select(c => new CursoReadDto(c.Id, c.Descripcion, c.Codigo, c.Activo))
+                .Select(c => new CursoReadDto(c.Id, c.Descripcion, c.Codigo, c.Activo, null, null, null, null))
                 .ToListAsync();
 
             return Ok(ApiResponse<IEnumerable<CursoReadDto>>.Success(items));

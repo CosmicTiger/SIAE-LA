@@ -12,7 +12,7 @@ using SIAE_LA.Infrastructure.Persistence;
 namespace SIAE_LA.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251119070519_InitialCreate")]
+    [Migration("20260209191610_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace SIAE_LA.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.21")
+                .HasAnnotation("ProductVersion", "8.0.23")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -28,133 +28,285 @@ namespace SIAE_LA.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("id");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("concurrency_stamp");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("normalized_name");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_asp_net_roles");
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasDatabaseName("RoleNameIndex");
+                        .HasDatabaseName("role_name_index");
 
-                    b.ToTable("AspNetRoles", (string)null);
+                    b.ToTable("asp_net_roles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("claim_type");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("claim_value");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<string>("RoleId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("role_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_asp_net_role_claims");
 
-                    b.HasIndex("RoleId");
+                    b.HasIndex("RoleId")
+                        .HasDatabaseName("i_x_asp_net_role_claims_role_id");
 
-                    b.ToTable("AspNetRoleClaims", (string)null);
+                    b.ToTable("asp_net_role_claims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("claim_type");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("claim_value");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_asp_net_user_claims");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("i_x_asp_net_user_claims_user_id");
 
-                    b.ToTable("AspNetUserClaims", (string)null);
+                    b.ToTable("asp_net_user_claims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("login_provider");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("provider_key");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("provider_display_name");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
 
-                    b.HasKey("LoginProvider", "ProviderKey");
+                    b.HasKey("LoginProvider", "ProviderKey")
+                        .HasName("p_k_asp_net_user_logins");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("i_x_asp_net_user_logins_user_id");
 
-                    b.ToTable("AspNetUserLogins", (string)null);
+                    b.ToTable("asp_net_user_logins", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
 
                     b.Property<string>("RoleId")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("role_id");
 
-                    b.HasKey("UserId", "RoleId");
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
 
-                    b.HasIndex("RoleId");
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion");
 
-                    b.ToTable("AspNetUserRoles", (string)null);
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
+
+                    b.HasKey("UserId", "RoleId")
+                        .HasName("p_k_asp_net_user_roles");
+
+                    b.HasIndex("RoleId")
+                        .HasDatabaseName("i_x_asp_net_user_roles_role_id");
+
+                    b.ToTable("asp_net_user_roles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
 
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("login_provider");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<string>("Value")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("value");
 
-                    b.HasKey("UserId", "LoginProvider", "Name");
+                    b.HasKey("UserId", "LoginProvider", "Name")
+                        .HasName("p_k_asp_net_user_tokens");
 
-                    b.ToTable("AspNetUserTokens", (string)null);
+                    b.ToTable("asp_net_user_tokens", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Alumno", b =>
@@ -170,18 +322,36 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("activo");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<int>("PersonaId")
                         .HasColumnType("integer")
                         .HasColumnName("persona_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_alumno");
 
                     b.HasIndex("PersonaId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("i_x_alumno_persona_id");
 
                     b.ToTable("alumno", (string)null);
                 });
@@ -196,10 +366,17 @@ namespace SIAE_LA.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("AlumnoId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("alumno_id");
 
                     b.Property<int>("ApoderadoId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("apoderado_id");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
 
                     b.Property<bool>("EsResponsableLegal")
                         .ValueGeneratedOnAdd()
@@ -215,16 +392,90 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fecha_inicio");
 
-                    b.HasKey("Id");
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion");
 
-                    b.HasIndex("AlumnoId");
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
 
-                    b.HasIndex("ApoderadoId");
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_alumno_apoderado");
+
+                    b.HasIndex("AlumnoId")
+                        .HasDatabaseName("i_x_alumno_apoderado_alumno_id");
+
+                    b.HasIndex("ApoderadoId")
+                        .HasDatabaseName("i_x_alumno_apoderado_apoderado_id");
 
                     b.HasIndex("AlumnoId", "FechaFin")
-                        .HasDatabaseName("IX_ALUMNO_APODERADO_ALUMNO_FECHAFIN");
+                        .HasDatabaseName("i_x__a_l_u_m_n_o__a_p_o_d_e_r_a_d_o__a_l_u_m_n_o__f_e_c_h_a_f_i_n");
 
                     b.ToTable("alumno_apoderado", (string)null);
+                });
+
+            modelBuilder.Entity("SIAE_LA.Domain.Entities.AnioLectivo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("anio_lectivo_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
+
+                    b.Property<int>("Anio")
+                        .HasColumnType("integer")
+                        .HasColumnName("anio");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("descripcion");
+
+                    b.Property<DateTime?>("FechaFin")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_fin");
+
+                    b.Property<DateTime>("FechaInicio")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_inicio");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_anio_lectivo");
+
+                    b.ToTable("anio_lectivo", (string)null);
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Apoderado", b =>
@@ -240,13 +491,29 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("activo");
 
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<string>("EstadoCivil")
                         .HasColumnType("text")
                         .HasColumnName("estado_civil");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<int>("PersonaId")
                         .HasColumnType("integer")
@@ -256,10 +523,12 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("text")
                         .HasColumnName("tipo_parentesco");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_apoderado");
 
                     b.HasIndex("PersonaId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("i_x_apoderado_persona_id");
 
                     b.ToTable("apoderado", (string)null);
                 });
@@ -267,10 +536,12 @@ namespace SIAE_LA.Migrations
             modelBuilder.Entity("SIAE_LA.Domain.Entities.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("id");
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("access_failed_count");
 
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("timestamp with time zone")
@@ -282,7 +553,13 @@ namespace SIAE_LA.Migrations
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("concurrency_stamp");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -292,6 +569,16 @@ namespace SIAE_LA.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean")
                         .HasColumnName("es_email_confirmado");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -304,18 +591,27 @@ namespace SIAE_LA.Migrations
                         .HasColumnName("esta_aprobado");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("lockout_enabled");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lockout_end");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("normalized_email");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("normalized_user_name");
 
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text")
@@ -334,27 +630,31 @@ namespace SIAE_LA.Migrations
                         .HasColumnName("es_telefono_confirmado");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("security_stamp");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("two_factor_enabled");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("username");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_usuarios");
 
                     b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
+                        .HasDatabaseName("email_index");
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
-                        .HasDatabaseName("UserNameIndex");
+                        .HasDatabaseName("user_name_index");
 
                     b.HasIndex("PersonaId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("i_x_usuarios_persona_id");
 
                     b.ToTable("usuarios", (string)null);
                 });
@@ -376,22 +676,47 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("alumno_id");
 
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<int>("CurriculaId")
                         .HasColumnType("integer")
                         .HasColumnName("curricula_id");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<decimal>("Nota")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)")
                         .HasColumnName("nota");
 
-                    b.HasKey("Id");
+                    b.Property<int?>("PeriodoId")
+                        .HasColumnType("integer")
+                        .HasColumnName("periodo_id");
 
-                    b.HasIndex("AlumnoId");
+                    b.HasKey("Id")
+                        .HasName("p_k_calificacion");
+
+                    b.HasIndex("AlumnoId")
+                        .HasDatabaseName("i_x_calificacion_alumno_id");
+
+                    b.HasIndex("PeriodoId")
+                        .HasDatabaseName("i_x_calificacion_periodo_id");
 
                     b.HasIndex("CurriculaId", "AlumnoId")
                         .IsUnique()
@@ -416,6 +741,11 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("activo");
 
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<string>("Descripcion")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
@@ -425,18 +755,33 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("docente_nivel_detalle_curso_id");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<int?>("NivelDetalleCursoId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("nivel_detalle_curso_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_curricula");
 
-                    b.HasIndex("DocenteNivelDetalleCursoId");
+                    b.HasIndex("DocenteNivelDetalleCursoId")
+                        .HasDatabaseName("i_x_curricula_docente_nivel_detalle_curso_id");
 
-                    b.HasIndex("NivelDetalleCursoId");
+                    b.HasIndex("NivelDetalleCursoId")
+                        .HasDatabaseName("i_x_curricula_nivel_detalle_curso_id");
 
                     b.ToTable("curricula", (string)null);
                 });
@@ -459,17 +804,34 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("codigo");
 
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<string>("Descripcion")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)")
                         .HasColumnName("descripcion");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
 
-                    b.HasKey("Id");
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_curso");
 
                     b.HasIndex("Codigo")
                         .HasDatabaseName("ix_curso_codigo");
@@ -490,23 +852,41 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("activo");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<string>("GradoEstudio")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("grado_estudio");
 
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
+
                     b.Property<int>("PersonaId")
                         .HasColumnType("integer")
                         .HasColumnName("persona_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_docente");
 
                     b.HasIndex("PersonaId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("i_x_docente_persona_id");
 
                     b.ToTable("docente", (string)null);
                 });
@@ -524,24 +904,43 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("activo");
 
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<int>("DocenteId")
                         .HasColumnType("integer")
                         .HasColumnName("docente_id");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<int>("NivelDetalleCursoId")
                         .HasColumnType("integer")
                         .HasColumnName("nivel_detalle_curso_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_docente_nivel_detalle_curso");
 
-                    b.HasIndex("DocenteId");
+                    b.HasIndex("DocenteId")
+                        .HasDatabaseName("i_x_docente_nivel_detalle_curso_docente_id");
 
                     b.HasIndex("NivelDetalleCursoId", "DocenteId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("i_x_docente_nivel_detalle_curso_nivel_detalle_curso_id_docente_~");
 
                     b.ToTable("docente_nivel_detalle_curso", (string)null);
                 });
@@ -559,6 +958,11 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("activo");
 
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<string>("DescripcionGrado")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -571,11 +975,23 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("descripcion_seccion");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
 
-                    b.HasKey("Id");
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_grado_seccion");
 
                     b.ToTable("grado_seccion", (string)null);
                 });
@@ -593,15 +1009,26 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("activo");
 
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<string>("DiaSemana")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("dia_semana");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<TimeSpan>("HoraFin")
                         .HasColumnType("interval")
@@ -611,13 +1038,20 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("interval")
                         .HasColumnName("hora_inicio");
 
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
+
                     b.Property<int>("NivelDetalleCursoId")
                         .HasColumnType("integer")
                         .HasColumnName("nivel_detalle_curso_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_horario");
 
-                    b.HasIndex("NivelDetalleCursoId");
+                    b.HasIndex("NivelDetalleCursoId")
+                        .HasDatabaseName("i_x_horario_nivel_detalle_curso_id");
 
                     b.ToTable("horario", (string)null);
                 });
@@ -639,6 +1073,10 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("alumno_id");
 
+                    b.Property<int?>("AnioLectivoId")
+                        .HasColumnType("integer")
+                        .HasColumnName("anio_lectivo_id");
+
                     b.Property<int?>("ApoderadoId")
                         .HasColumnType("integer")
                         .HasColumnName("apoderado_id");
@@ -648,26 +1086,38 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("codigo");
 
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<bool?>("EsRepitente")
                         .HasColumnType("boolean")
                         .HasColumnName("es_repitente");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<string>("InstitucionProcedencia")
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)")
                         .HasColumnName("institucion_procedencia");
 
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
+
                     b.Property<int>("NivelDetalleId")
                         .HasColumnType("integer")
                         .HasColumnName("nivel_detalle_id");
-
-                    b.Property<int>("PeriodoId")
-                        .HasColumnType("integer")
-                        .HasColumnName("periodo_id");
 
                     b.Property<string>("Situacion")
                         .HasMaxLength(40)
@@ -679,16 +1129,21 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("valor_codigo");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_matricula");
 
-                    b.HasIndex("ApoderadoId");
+                    b.HasIndex("AnioLectivoId")
+                        .HasDatabaseName("i_x_matricula_anio_lectivo_id");
 
-                    b.HasIndex("NivelDetalleId");
+                    b.HasIndex("ApoderadoId")
+                        .HasDatabaseName("i_x_matricula_apoderado_id");
 
-                    b.HasIndex("PeriodoId");
+                    b.HasIndex("NivelDetalleId")
+                        .HasDatabaseName("i_x_matricula_nivel_detalle_id");
 
-                    b.HasIndex("AlumnoId", "NivelDetalleId", "PeriodoId")
-                        .IsUnique();
+                    b.HasIndex("AlumnoId", "NivelDetalleId", "AnioLectivoId")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_matricula_alumno_id_nivel_detalle_id_anio_lectivo_id");
 
                     b.ToTable("matricula", (string)null);
                 });
@@ -706,6 +1161,11 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("activo");
 
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<string>("DescripcionNivel")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -717,16 +1177,28 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("descripcion_turno");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<string>("Horario")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("horario");
 
-                    b.HasKey("Id");
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_nivel");
 
                     b.ToTable("nivel", (string)null);
                 });
@@ -744,13 +1216,29 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("activo");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<int>("GradoSeccionId")
                         .HasColumnType("integer")
                         .HasColumnName("grado_seccion_id");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<int>("NivelId")
                         .HasColumnType("integer")
@@ -764,12 +1252,15 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("vacantes_ocupadas");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_nivel_detalle");
 
-                    b.HasIndex("GradoSeccionId");
+                    b.HasIndex("GradoSeccionId")
+                        .HasDatabaseName("i_x_nivel_detalle_grado_seccion_id");
 
                     b.HasIndex("NivelId", "GradoSeccionId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("i_x_nivel_detalle_nivel_id_grado_seccion_id");
 
                     b.ToTable("nivel_detalle", (string)null);
                 });
@@ -787,24 +1278,43 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("activo");
 
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<int>("CursoId")
                         .HasColumnType("integer")
                         .HasColumnName("curso_id");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<int>("NivelDetalleId")
                         .HasColumnType("integer")
                         .HasColumnName("nivel_detalle_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_nivel_detalle_curso");
 
-                    b.HasIndex("CursoId");
+                    b.HasIndex("CursoId")
+                        .HasDatabaseName("i_x_nivel_detalle_curso_curso_id");
 
                     b.HasIndex("NivelDetalleId", "CursoId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("i_x_nivel_detalle_curso_nivel_detalle_id_curso_id");
 
                     b.ToTable("nivel_detalle_curso", (string)null);
                 });
@@ -822,17 +1332,45 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("activo");
 
+                    b.Property<int?>("AnioLectivoId")
+                        .HasColumnType("integer")
+                        .HasColumnName("anio_lectivo_id");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<string>("Descripcion")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("descripcion");
 
-                    b.Property<DateTime>("FechaRegistro")
+                    b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_modificacion");
 
-                    b.HasKey("Id");
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer")
+                        .HasColumnName("orden");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_periodo");
+
+                    b.HasIndex("AnioLectivoId", "Orden")
+                        .HasDatabaseName("ix_periodo_anio_orden");
 
                     b.ToTable("periodo", (string)null);
                 });
@@ -841,7 +1379,8 @@ namespace SIAE_LA.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
@@ -865,6 +1404,11 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("codigo");
 
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("creado_por");
+
                     b.Property<string>("Direccion")
                         .HasMaxLength(140)
                         .HasColumnType("character varying(140)")
@@ -881,14 +1425,25 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("character varying(120)")
                         .HasColumnName("email");
 
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_modificacion");
+
                     b.Property<DateTime?>("FechaNacimiento")
                         .IsRequired()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fecha_nacimiento");
 
                     b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_registro");
+                        .HasColumnName("fecha_registro")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("modificado_por");
 
                     b.Property<string>("Nombres")
                         .IsRequired()
@@ -912,10 +1467,12 @@ namespace SIAE_LA.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("valor_codigo");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("p_k_persona");
 
                     b.HasIndex("DocumentoIdentidad")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("i_x_persona_documento_identidad");
 
                     b.ToTable("persona", null, t =>
                         {
@@ -933,7 +1490,8 @@ namespace SIAE_LA.Migrations
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_asp_net_role_claims_asp_net_roles_role_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -942,7 +1500,8 @@ namespace SIAE_LA.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_asp_net_user_claims_usuarios_user_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
@@ -951,7 +1510,8 @@ namespace SIAE_LA.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_asp_net_user_logins_usuarios_user_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
@@ -960,13 +1520,15 @@ namespace SIAE_LA.Migrations
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_asp_net_user_roles_asp_net_roles_role_id");
 
                     b.HasOne("SIAE_LA.Domain.Entities.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_asp_net_user_roles_usuarios_user_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -975,7 +1537,8 @@ namespace SIAE_LA.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_asp_net_user_tokens_usuarios_user_id");
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Alumno", b =>
@@ -984,7 +1547,8 @@ namespace SIAE_LA.Migrations
                         .WithOne("Alumno")
                         .HasForeignKey("SIAE_LA.Domain.Entities.Alumno", "PersonaId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_alumno_persona_persona_id");
 
                     b.Navigation("Persona");
                 });
@@ -995,13 +1559,15 @@ namespace SIAE_LA.Migrations
                         .WithMany("Apoderados")
                         .HasForeignKey("AlumnoId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_alumno_apoderado_alumno_alumno_id");
 
                     b.HasOne("SIAE_LA.Domain.Entities.Apoderado", "Apoderado")
                         .WithMany()
                         .HasForeignKey("ApoderadoId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_alumno_apoderado_apoderado_apoderado_id");
 
                     b.Navigation("Alumno");
 
@@ -1014,7 +1580,8 @@ namespace SIAE_LA.Migrations
                         .WithOne("Apoderado")
                         .HasForeignKey("SIAE_LA.Domain.Entities.Apoderado", "PersonaId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_apoderado_persona_persona_id");
 
                     b.Navigation("Persona");
                 });
@@ -1024,7 +1591,8 @@ namespace SIAE_LA.Migrations
                     b.HasOne("SIAE_LA.Domain.Entities.Persona", "Persona")
                         .WithOne()
                         .HasForeignKey("SIAE_LA.Domain.Entities.ApplicationUser", "PersonaId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("f_k_usuarios_persona_persona_id");
 
                     b.Navigation("Persona");
                 });
@@ -1035,17 +1603,27 @@ namespace SIAE_LA.Migrations
                         .WithMany("Calificaciones")
                         .HasForeignKey("AlumnoId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_calificacion_alumno_alumno_id");
 
                     b.HasOne("SIAE_LA.Domain.Entities.Curricula", "Curricula")
                         .WithMany("Calificaciones")
                         .HasForeignKey("CurriculaId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_calificacion_curricula_curricula_id");
+
+                    b.HasOne("SIAE_LA.Domain.Entities.Periodo", "Periodo")
+                        .WithMany()
+                        .HasForeignKey("PeriodoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("f_k_calificacion_periodo_periodo_id");
 
                     b.Navigation("Alumno");
 
                     b.Navigation("Curricula");
+
+                    b.Navigation("Periodo");
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Curricula", b =>
@@ -1054,11 +1632,13 @@ namespace SIAE_LA.Migrations
                         .WithMany("Curriculas")
                         .HasForeignKey("DocenteNivelDetalleCursoId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_curricula_docente_nivel_detalle_curso_docente_nivel_detalle~");
 
                     b.HasOne("SIAE_LA.Domain.Entities.NivelDetalleCurso", null)
                         .WithMany("Curriculas")
-                        .HasForeignKey("NivelDetalleCursoId");
+                        .HasForeignKey("NivelDetalleCursoId")
+                        .HasConstraintName("f_k_curricula_nivel_detalle_curso_nivel_detalle_curso_id");
 
                     b.Navigation("DocenteNivelDetalleCurso");
                 });
@@ -1069,7 +1649,8 @@ namespace SIAE_LA.Migrations
                         .WithOne("Docente")
                         .HasForeignKey("SIAE_LA.Domain.Entities.Docente", "PersonaId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_docente_persona_persona_id");
 
                     b.Navigation("Persona");
                 });
@@ -1080,13 +1661,15 @@ namespace SIAE_LA.Migrations
                         .WithMany("Asignaciones")
                         .HasForeignKey("DocenteId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_docente_nivel_detalle_curso_docente_docente_id");
 
                     b.HasOne("SIAE_LA.Domain.Entities.NivelDetalleCurso", "NivelDetalleCurso")
                         .WithMany("Docentes")
                         .HasForeignKey("NivelDetalleCursoId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_docente_nivel_detalle_curso_nivel_detalle_curso_nivel_detal~");
 
                     b.Navigation("Docente");
 
@@ -1099,7 +1682,8 @@ namespace SIAE_LA.Migrations
                         .WithMany("Horarios")
                         .HasForeignKey("NivelDetalleCursoId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_horario_nivel_detalle_curso_nivel_detalle_curso_id");
 
                     b.Navigation("NivelDetalleCurso");
                 });
@@ -1110,32 +1694,35 @@ namespace SIAE_LA.Migrations
                         .WithMany("Matriculas")
                         .HasForeignKey("AlumnoId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_matricula_alumno_alumno_id");
+
+                    b.HasOne("SIAE_LA.Domain.Entities.AnioLectivo", "AnioLectivo")
+                        .WithMany("Matriculas")
+                        .HasForeignKey("AnioLectivoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("f_k_matricula_anio_lectivo_anio_lectivo_id");
 
                     b.HasOne("SIAE_LA.Domain.Entities.Apoderado", "Apoderado")
                         .WithMany("Matriculas")
                         .HasForeignKey("ApoderadoId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("f_k_matricula_apoderado_apoderado_id");
 
                     b.HasOne("SIAE_LA.Domain.Entities.NivelDetalle", "NivelDetalle")
                         .WithMany("Matriculas")
                         .HasForeignKey("NivelDetalleId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SIAE_LA.Domain.Entities.Periodo", "Periodo")
-                        .WithMany()
-                        .HasForeignKey("PeriodoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_matricula_nivel_detalle_nivel_detalle_id");
 
                     b.Navigation("Alumno");
+
+                    b.Navigation("AnioLectivo");
 
                     b.Navigation("Apoderado");
 
                     b.Navigation("NivelDetalle");
-
-                    b.Navigation("Periodo");
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.NivelDetalle", b =>
@@ -1144,13 +1731,15 @@ namespace SIAE_LA.Migrations
                         .WithMany("NivelDetalles")
                         .HasForeignKey("GradoSeccionId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_nivel_detalle_grado_seccion_grado_seccion_id");
 
                     b.HasOne("SIAE_LA.Domain.Entities.Nivel", "Nivel")
                         .WithMany("Detalles")
                         .HasForeignKey("NivelId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_nivel_detalle_nivel_nivel_id");
 
                     b.Navigation("GradoSeccion");
 
@@ -1163,17 +1752,30 @@ namespace SIAE_LA.Migrations
                         .WithMany("Niveles")
                         .HasForeignKey("CursoId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_nivel_detalle_curso_curso_curso_id");
 
                     b.HasOne("SIAE_LA.Domain.Entities.NivelDetalle", "NivelDetalle")
                         .WithMany("Cursos")
                         .HasForeignKey("NivelDetalleId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("f_k_nivel_detalle_curso_nivel_detalle_nivel_detalle_id");
 
                     b.Navigation("Curso");
 
                     b.Navigation("NivelDetalle");
+                });
+
+            modelBuilder.Entity("SIAE_LA.Domain.Entities.Periodo", b =>
+                {
+                    b.HasOne("SIAE_LA.Domain.Entities.AnioLectivo", "AnioLectivo")
+                        .WithMany("Periodos")
+                        .HasForeignKey("AnioLectivoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("f_k_periodo_anio_lectivo_anio_lectivo_id");
+
+                    b.Navigation("AnioLectivo");
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Alumno", b =>
@@ -1183,6 +1785,13 @@ namespace SIAE_LA.Migrations
                     b.Navigation("Calificaciones");
 
                     b.Navigation("Matriculas");
+                });
+
+            modelBuilder.Entity("SIAE_LA.Domain.Entities.AnioLectivo", b =>
+                {
+                    b.Navigation("Matriculas");
+
+                    b.Navigation("Periodos");
                 });
 
             modelBuilder.Entity("SIAE_LA.Domain.Entities.Apoderado", b =>

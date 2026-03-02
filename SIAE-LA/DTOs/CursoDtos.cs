@@ -6,8 +6,15 @@ namespace SIAE_LA.DTOs
     int Id,
     string Descripcion,
     string? Codigo,
-    bool Activo
+    bool Activo,
+    string? CreadoPor = null,
+    string? ModificadoPor = null,
+    DateTime? FechaModificacion = null,
+    DateTime? FechaIngreso = null
     );
+
+    // Incluye FechaIngreso (fecha_registro) además de las propiedades de auditoría
+    public sealed record AuditInfo(string? CreadoPor, string? ModificadoPor, DateTime? FechaModificacion, DateTime FechaIngreso);
 
 
     public class CursoCreateDto

@@ -30,7 +30,6 @@ public class PersonaConfig : IEntityTypeConfiguration<Persona>
         b.Property(x => x.Email).HasMaxLength(120).HasColumnName("email");
         b.Property(x => x.NumeroTelefono).HasMaxLength(30).HasColumnName("numero_telefono");
         b.Property(x => x.Activo).HasColumnName("activo");
-        b.Property(x => x.FechaRegistro).HasColumnName("fecha_registro");
         b.Property(x => x.Codigo).HasMaxLength(30).HasColumnName("codigo");
         b.Property(x => x.ValorCodigo).HasMaxLength(30).HasColumnName("valor_codigo");
     }

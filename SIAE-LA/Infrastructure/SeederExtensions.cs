@@ -14,7 +14,9 @@ public static class SeederExtensions
         var roleMgr = services.GetRequiredService<RoleManager<IdentityRole>>();
         var userMgr = services.GetRequiredService<UserManager<ApplicationUser>>();
 
-        var seeder = new DataSeeder(db, roleMgr, userMgr);
+        var logger = services.GetRequiredService<ILogger<DataSeeder>>(); // Logger for seeder
+        var config = services.GetRequiredService<IConfiguration>(); // Configuration for seeder
+        var seeder = new DataSeeder(db, roleMgr, userMgr, logger, config); // Create seeder instance
         await seeder.SeedAsync();
     }
 }

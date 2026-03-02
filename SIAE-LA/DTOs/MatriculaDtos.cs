@@ -7,16 +7,21 @@ namespace SIAE_LA.DTOs
         int Id,
         int AlumnoId,
         int NivelDetalleId,
-        int PeriodoId,
+        int? AnioLectivoId,
         int? ApoderadoId,
         string? Situacion,
         string? InstitucionProcedencia,
         bool? EsRepitente,
-        DateTime FechaRegistro
+        DateTime FechaRegistro,
+        string? CreadoPor = null,
+        string? ModificadoPor = null,
+        DateTime? FechaModificacion = null,
+        DateTime? FechaIngreso = null
     );
 
     // Nueva estructura: incluir detalle del NivelDetalle con Nivel y GradoSeccion
     public record GradoSeccionDto(int Id, string DescripcionGrado, string DescripcionSeccion, bool activo, DateTime? FechaRegistro);
+    
 
     public record NivelDto(int Id, string DescripcionNivel, string? DescripcionTurno, string? Horario);
 
@@ -44,7 +49,7 @@ namespace SIAE_LA.DTOs
         int Id,
         AlumnoReadDto alumno,
         NivelDetalleResumenDto NivelDetalle,
-        PeriodoReadDto Periodo,
+        PeriodoReadDto? Periodo,
         TutorDto? Apoderado,
         string? Situacion,
         string? InstitucionProcedencia,
@@ -56,7 +61,7 @@ namespace SIAE_LA.DTOs
     public sealed record MatriculaResumenDto(
             int MatriculaId,
             NivelResumenDto? Nivel,
-            int PeriodoId,
+            int? AnioLectivoId,
             string? Situacion,
             bool? EsRepetente,
             int? ApoderadoId,
@@ -67,7 +72,7 @@ namespace SIAE_LA.DTOs
     {
         [Required] public int AlumnoId { get; set; }
         [Required] public int NivelDetalleId { get; set; }
-        [Required] public int PeriodoId { get; set; }
+        [Required] public int AnioLectivoId { get; set; }
         public int? ApoderadoId { get; set; }
         [MaxLength(40)] public string? Situacion { get; set; }
         [MaxLength(120)] public string? InstitucionProcedencia { get; set; }

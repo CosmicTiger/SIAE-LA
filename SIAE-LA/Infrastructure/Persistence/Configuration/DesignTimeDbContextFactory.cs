@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.AspNetCore.Http;
 
 namespace SIAE_LA.Infrastructure.Persistence.Configuration
 {
@@ -30,7 +31,8 @@ namespace SIAE_LA.Infrastructure.Persistence.Configuration
                 builder.UseNpgsql(cs);
             }
 
-            return new ApplicationDbContext(builder.Options);
+            // Provide a default IHttpContextAccessor for design-time DbContext operations
+            return new ApplicationDbContext(builder.Options, new HttpContextAccessor());
         }
     }
 }

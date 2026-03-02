@@ -19,8 +19,9 @@ public class Matricula
     [System.ComponentModel.DataAnnotations.MaxLength(120)] public string? InstitucionProcedencia { get; set; }
     public bool? EsRepitente { get; set; }
 
-    public int PeriodoId { get; set; }
-    public Periodo Periodo { get; set; } = default!;
+    // Matricula se registra para un Año lectivo (la matrícula pertenece al año)
+    public int? AnioLectivoId { get; set; }
+    public AnioLectivo? AnioLectivo { get; set; }
 
     public bool Activo { get; set; } = true;
     public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;

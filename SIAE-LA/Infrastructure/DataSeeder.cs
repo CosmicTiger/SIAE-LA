@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using SIAE_LA.Domain.Entities;
 using SIAE_LA.Infrastructure.Persistence;
 using SIAE_LA.Utils;
@@ -11,21 +13,33 @@ public class DataSeeder
     private readonly ApplicationDbContext _db;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ILogger<DataSeeder> _logger;
+    private readonly IConfiguration _config;
+    // Id of the user to record in audit fields when seeding (root/system user)
+    private string? _seedUserId;
 
     public DataSeeder(
         ApplicationDbContext db,
         RoleManager<IdentityRole> roleManager,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ILogger<DataSeeder> logger,
+        IConfiguration config)
     {
         _db = db;
         _roleManager = roleManager;
         _userManager = userManager;
+        _logger = logger;
+        _config = config;
     }
 
     public async Task SeedAsync()
     {
         // 1) Migraciones
+        _logger?.LogInformation("Starting database migrations...");
         await _db.Database.MigrateAsync();
+        _logger?.LogInformation("Migrations applied.");
+        // default seed user id when no real user exists yet
+        _seedUserId = "system";
 
         // 2) Roles + root admin
         await SeedRolesAsync();
@@ -34,8 +48,65 @@ public class DataSeeder
         // 3) Catálogos del ER
         await SeedCatalogsAsync();
 
-        // 4) Personas / Usuarios / Vínculos (docentes, dirección, alumnos + tutores)
-        await SeedPeopleAndUsersAsync();
+        // 4) Año lectivo demo + periodos (4 bimestres)
+        // Default demo year — configurable via appsettings:Siaela:DemoYear or env SIAE_DEMO_YEAR
+        var demoYear = _config?.GetValue<int?>("Siae:DemoYear")
+            ?? (int.TryParse(Environment.GetEnvironmentVariable("SIAE_DEMO_YEAR"), out var y) ? y : (int?)null)
+            ?? 2026;
+        _logger?.LogInformation("Seeding demo academic year: {Year}", demoYear);
+        await SeedAcademicYearDemoAsync(demoYear);
+
+        // 5) Personas / Usuarios / Vínculos (docentes, dirección, alumnos + tutores)
+        _logger?.LogInformation("Seeding people and users for year {Year}", demoYear);
+        await SeedPeopleAndUsersAsync(demoYear);
+        _logger?.LogInformation("Data seeding completed.");
+    }
+
+    // Save changes while assigning audit shadow properties for seeding operations
+    private async Task<int> SaveChangesWithAuditAsync(CancellationToken ct = default)
+    {
+        var userId = _seedUserId;
+        var now = DateTime.UtcNow;
+        foreach (var entry in _db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added || e.State == EntityState.Modified))
+        {
+            if (entry.State == EntityState.Added)
+            {
+                var creadoProp = entry.Metadata.FindProperty("CreadoPor");
+                if (creadoProp != null)
+                    entry.Property(creadoProp.Name).CurrentValue = userId;
+
+                var fechaRegistro = entry.Metadata.FindProperty("FechaRegistro");
+                if (fechaRegistro != null)
+                {
+                    var cur = entry.Property(fechaRegistro.Name).CurrentValue;
+                    if (cur == null || (cur is DateTime dt && dt == default))
+                        entry.Property(fechaRegistro.Name).CurrentValue = now;
+                }
+            }
+
+            var modProp = entry.Metadata.FindProperty("ModificadoPor");
+            if (modProp != null)
+                entry.Property(modProp.Name).CurrentValue = userId;
+
+            var fechaMod = entry.Metadata.FindProperty("FechaModificacion");
+            if (fechaMod != null)
+                entry.Property(fechaMod.Name).CurrentValue = now;
+            
+            // Ensure any DateTime properties have Kind==Utc. Npgsql requires UTC for timestamptz.
+            foreach (var prop in entry.Properties)
+            {
+                var val = prop.CurrentValue;
+                if (val is DateTime dt)
+                {
+                    if (dt.Kind == DateTimeKind.Unspecified)
+                        prop.CurrentValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                    else if (dt.Kind == DateTimeKind.Local)
+                        prop.CurrentValue = dt.ToUniversalTime();
+                }
+            }
+        }
+
+        return await _db.SaveChangesAsync(ct);
     }
 
     private static DateTime UtcDate(int y, int m, int d)
@@ -43,6 +114,71 @@ public class DataSeeder
 
     private static DateTime AsUtcDate(DateTime dt)
         => new DateTime(dt.Year, dt.Month, dt.Day, 0, 0, 0, DateTimeKind.Utc);
+
+    // Seed an academic year (AnioLectivo) and four bimesters (Periodos)
+    private async Task SeedAcademicYearDemoAsync(int year, CancellationToken ct = default)
+    {
+        using var tx = await _db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            _logger?.LogInformation("Seeding academic year {Year}", year);
+            var existing = await _db.AniosLectivos.AsNoTracking().FirstOrDefaultAsync(a => a.Anio == year, ct);
+            AnioLectivo anio;
+            if (existing is null)
+            {
+                _logger?.LogInformation("Creating AnioLectivo for {Year}", year);
+                anio = new AnioLectivo
+                {
+                    Anio = year,
+                    Descripcion = $"Año lectivo {year}",
+                    Activo = true,
+                    FechaInicio = new DateTime(year, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                };
+                _db.AniosLectivos.Add(anio);
+                await SaveChangesWithAuditAsync(ct);
+            }
+            else
+            {
+                _logger?.LogInformation("AnioLectivo {Year} already exists (Id={Id})", year, existing.Id);
+                anio = existing;
+            }
+
+            // Ensure 4 bimestres (Periodos) exist and are linked to this AnioLectivo
+            var descriptions = new[] { "I Bimestre", "II Bimestre", "III Bimestre", "IV Bimestre" };
+            for (int i = 0; i < descriptions.Length; i++)
+            {
+                var desc = $"{year} - {descriptions[i]}";
+                _logger?.LogDebug("Ensuring periodo '{Desc}'", desc);
+                var p = await _db.Periodos.FirstOrDefaultAsync(per => per.Descripcion == desc);
+                if (p is null)
+                {
+                    _logger?.LogInformation("Creating periodo {Desc} for AnioLectivo {AnioId}", desc, anio.Id);
+                    p = new Periodo { Descripcion = desc, Activo = true, AnioLectivoId = anio.Id, Orden = i + 1 };
+                    _db.Periodos.Add(p);
+                    await SaveChangesWithAuditAsync(ct);
+                }
+                else
+                {
+                    // If exists but linked to wrong AnioLectivo, fix it
+                    if (p.AnioLectivoId != anio.Id)
+                    {
+                        _logger?.LogWarning("Periodo {Desc} exists but linked to AnioLectivo {Old} - reassigning to {New}", desc, p.AnioLectivoId, anio.Id);
+                        p.AnioLectivoId = anio.Id;
+                        p.Orden = i + 1;
+                        _db.Periodos.Update(p);
+                        await SaveChangesWithAuditAsync(ct);
+                    }
+                }
+            }
+
+            await tx.CommitAsync(ct);
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
+    }
 
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -55,7 +191,10 @@ public class DataSeeder
         foreach (var role in roles)
         {
             if (!await _roleManager.RoleExistsAsync(role))
+            {
+                _logger?.LogInformation("Creating role {Role}", role);
                 await _roleManager.CreateAsync(new IdentityRole(role));
+            }
         }
     }
 
@@ -75,6 +214,7 @@ public class DataSeeder
 
         if (!anyAdmin)
         {
+            _logger?.LogInformation("No admin found - creating root admin {Email}", email);
             var root = new ApplicationUser
             {
                 UserName = email,
@@ -92,6 +232,27 @@ public class DataSeeder
             }
 
             await _userManager.AddToRoleAsync(root, "Admin");
+            _logger?.LogInformation("Root admin created: {Email}", email);
+            // Use the created root user's Id for subsequent audit fields
+            _seedUserId = root.Id;
+            // Ensure audit shadow properties are set for the identity user row as well
+            try
+            {
+                _db.Attach(root);
+                var now = DateTime.UtcNow;
+                var entry = _db.Entry(root);
+                // Set shadow properties if present
+                if (entry.Metadata.FindProperty("CreadoPor") != null) entry.Property("CreadoPor").CurrentValue = _seedUserId;
+                if (entry.Metadata.FindProperty("FechaRegistro") != null) entry.Property("FechaRegistro").CurrentValue = now;
+                if (entry.Metadata.FindProperty("ModificadoPor") != null) entry.Property("ModificadoPor").CurrentValue = _seedUserId;
+                if (entry.Metadata.FindProperty("FechaModificacion") != null) entry.Property("FechaModificacion").CurrentValue = now;
+                entry.State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                await SaveChangesWithAuditAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to persist audit fields for root admin user {Email}", email);
+            }
             return;
         }
 
@@ -100,8 +261,29 @@ public class DataSeeder
         var firstNotApproved = admins.FirstOrDefault(a => !a.IsApproved);
         if (firstNotApproved is not null)
         {
+            _logger?.LogInformation("Approving existing admin user {UserId}", firstNotApproved.Id);
             firstNotApproved.IsApproved = true;
-            await _db.SaveChangesAsync();
+            // Persist the approval and ensure audit fields use the admin id
+            // Temporarily set seed user to this admin so the approval change is auditable
+            var previousSeed = _seedUserId;
+            try
+            {
+                _seedUserId = firstNotApproved.Id;
+                await SaveChangesWithAuditAsync();
+            }
+            finally
+            {
+                _seedUserId = previousSeed;
+            }
+            // Also use this approved admin id for subsequent seeding
+            _seedUserId = firstNotApproved.Id;
+        }
+        else
+        {
+            // If there is no specifically approved admin, pick the first existing admin id for audit
+            var chosen = admins.FirstOrDefault();
+            if (chosen is not null)
+                _seedUserId = chosen.Id;
         }
     }
 
@@ -113,22 +295,24 @@ public class DataSeeder
         // NIVELES
         if (!await _db.Niveles.AnyAsync())
         {
+            _logger?.LogInformation("Seeding niveles (Primaria, Secundaria)");
             var primaria = new Nivel { DescripcionNivel = "Primaria", DescripcionTurno = "Mañana" };
             var secundaria = new Nivel { DescripcionNivel = "Secundaria", DescripcionTurno = "Tarde" };
             _db.Niveles.AddRange(primaria, secundaria);
-            await _db.SaveChangesAsync();
+            await SaveChangesWithAuditAsync();
         }
 
         // GRADO_SECCION
         if (!await _db.GradoSecciones.AnyAsync())
         {
+            _logger?.LogInformation("Seeding grado seccion demo");
             _db.GradoSecciones.AddRange(
                 new GradoSeccion { DescripcionGrado = "1°", DescripcionSeccion = "A" },
                 new GradoSeccion { DescripcionGrado = "1°", DescripcionSeccion = "B" },
                 new GradoSeccion { DescripcionGrado = "2°", DescripcionSeccion = "A" },
                 new GradoSeccion { DescripcionGrado = "7°", DescripcionSeccion = "A" }
             );
-            await _db.SaveChangesAsync();
+            await SaveChangesWithAuditAsync();
         }
 
         // NIVEL_DETALLE (Nivel + GradoSeccion)
@@ -147,18 +331,19 @@ public class DataSeeder
                 new NivelDetalle { NivelId = primaria.Id, GradoSeccionId = g2A.Id, TotalVacantes = 40, VacantesOcupadas = 0 },
                 new NivelDetalle { NivelId = secundaria.Id, GradoSeccionId = g7A.Id, TotalVacantes = 40, VacantesOcupadas = 0 }
             );
-            await _db.SaveChangesAsync();
+            await SaveChangesWithAuditAsync();
         }
 
         // CURSO
         if (!await _db.Cursos.AnyAsync())
         {
+            _logger?.LogInformation("Seeding cursos demo");
             _db.Cursos.AddRange(
                 new Curso { Descripcion = "Matemática", Codigo = "MAT-01" },
                 new Curso { Descripcion = "Lengua y Literatura", Codigo = "LEN-01" },
                 new Curso { Descripcion = "Ciencias Naturales", Codigo = "CIE-01" }
             );
-            await _db.SaveChangesAsync();
+            await SaveChangesWithAuditAsync();
         }
 
         // NIVEL_DETALLE_CURSO (asociar todos los cursos a todos los detalles)
@@ -167,7 +352,7 @@ public class DataSeeder
             var detalles = await _db.NivelesDetalle.AsNoTracking().ToListAsync();
             var cursos = await _db.Cursos.AsNoTracking().ToListAsync();
 
-            foreach (var nd in detalles)
+                    foreach (var nd in detalles)
                 foreach (var c in cursos)
                     _db.NivelesDetalleCurso.Add(new NivelDetalleCurso
                     {
@@ -176,7 +361,7 @@ public class DataSeeder
                         Activo = true
                     });
 
-            await _db.SaveChangesAsync();
+            await SaveChangesWithAuditAsync();
         }
 
         // DOCENTE(s) demo (por estructura – no usuarios aún)
@@ -216,19 +401,21 @@ public class DataSeeder
                 NumeroTelefono = telLuis
             };
 
+            _logger?.LogInformation("Seeding demo personas/docentes");
             _db.Personas.AddRange(p1, p2);
-            await _db.SaveChangesAsync();
+            await SaveChangesWithAuditAsync();
 
             _db.Docentes.AddRange(
                 new Docente { PersonaId = p1.Id, GradoEstudio = "Licenciatura" },
                 new Docente { PersonaId = p2.Id, GradoEstudio = "Maestría" }
             );
-            await _db.SaveChangesAsync();
+            await SaveChangesWithAuditAsync();
         }
 
         // DOCENTE_NIVELDETALLE_CURSO (asignación docente–curso–nivel)
         if (!await _db.DocentesNivelDetalleCurso.AnyAsync())
         {
+            _logger?.LogInformation("Seeding docentes-nivel-detalle-curso assignments");
             var docente1 = await _db.Docentes.OrderBy(d => d.Id).FirstAsync();
             var docente2 = await _db.Docentes.OrderBy(d => d.Id).Skip(1).FirstAsync();
             var ndcList = await _db.NivelesDetalleCurso.AsNoTracking().ToListAsync();
@@ -242,12 +429,13 @@ public class DataSeeder
                     Activo = true
                 });
             }
-            await _db.SaveChangesAsync();
+            await SaveChangesWithAuditAsync();
         }
 
         // CURRICULA (una por asignación)
         if (!await _db.Curriculas.AnyAsync())
         {
+            _logger?.LogInformation("Seeding demo curriculas");
             var asignaciones = await _db.DocentesNivelDetalleCurso.AsNoTracking().ToListAsync();
             foreach (var a in asignaciones.Take(6))
             {
@@ -258,20 +446,11 @@ public class DataSeeder
                     Activo = true
                 });
             }
-            await _db.SaveChangesAsync();
+            await SaveChangesWithAuditAsync();
         }
 
         // PERIODO
-        if (!await _db.Periodos.AnyAsync())
-        {
-            var y = DateTime.UtcNow.Year;
-            _db.Periodos.AddRange(
-                new Periodo { Descripcion = $"{y} - I Corte", Activo = true },
-                new Periodo { Descripcion = $"{y} - II Corte", Activo = true },
-                new Periodo { Descripcion = $"{y} - III Corte", Activo = true }
-            );
-            await _db.SaveChangesAsync();
-        }
+        // periodos are seeded per AnioLectivo in SeedAcademicYearDemoAsync
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -298,6 +477,25 @@ public class DataSeeder
             var res = await _userManager.CreateAsync(user, password);
             if (!res.Succeeded)
                 throw new InvalidOperationException(string.Join("; ", res.Errors.Select(e => e.Description)));
+
+            // Persist audit shadow properties for the created identity user
+            try
+            {
+                // use current seed user id when seeding (could be 'system' or previously chosen admin)
+                var now = DateTime.UtcNow;
+                _db.Attach(user);
+                var entry = _db.Entry(user);
+                if (entry.Metadata.FindProperty("CreadoPor") != null) entry.Property("CreadoPor").CurrentValue = _seedUserId;
+                if (entry.Metadata.FindProperty("FechaRegistro") != null) entry.Property("FechaRegistro").CurrentValue = now;
+                if (entry.Metadata.FindProperty("ModificadoPor") != null) entry.Property("ModificadoPor").CurrentValue = _seedUserId;
+                if (entry.Metadata.FindProperty("FechaModificacion") != null) entry.Property("FechaModificacion").CurrentValue = now;
+                entry.State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                await SaveChangesWithAuditAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to persist audit fields for user {Email}", email);
+            }
         }
 
         var current = await _userManager.GetRolesAsync(user);
@@ -308,7 +506,7 @@ public class DataSeeder
         return user;
     }
 
-    private async Task SeedPeopleAndUsersAsync()
+    private async Task SeedPeopleAndUsersAsync(int year)
     {
         // 1) Docente de profesión con rol de sistema JefeArea (debe existir fila Docente)
         if (!await _userManager.Users.AnyAsync(u => u.Email == "ana.gomez@demo.local"))
@@ -316,17 +514,17 @@ public class DataSeeder
             var pAna = await _db.Personas.FirstOrDefaultAsync(p => p.Email == "ana.gomez@demo.local");
             if (pAna is null)
             {
-                var fn = new DateTime(1990, 7, 16);
+                var fn = UtcDate(1990, 7, 16);
                 var ced = CedulaNicaraguenseValidadorHelper.BuildCedula("001", fn, 1027, 'B');
                 TelefonoNicaraguenseValidadorHelper.TryNormalizePhoneNi("8888-0000", out var tel);
                 pAna = new Persona { Nombres = "Ana", Apellidos = "Gómez", Email = "ana.gomez@demo.local", DocumentoIdentidad = ced, FechaNacimiento = fn, Sexo = "F", NumeroTelefono = tel, Ciudad = "Managua" };
-                _db.Personas.Add(pAna); await _db.SaveChangesAsync();
+                _db.Personas.Add(pAna); await SaveChangesWithAuditAsync();
             }
 
             if (!await _db.Docentes.AnyAsync(d => d.PersonaId == pAna.Id))
             {
                 _db.Docentes.Add(new Docente { PersonaId = pAna.Id, GradoEstudio = "Licenciatura" });
-                await _db.SaveChangesAsync();
+                await SaveChangesWithAuditAsync();
             }
 
             await EnsureUserAsync("ana.gomez@demo.local", "Docente123!", "Ana Gómez", pAna.Id, approved: true, "JefeArea");
@@ -338,17 +536,17 @@ public class DataSeeder
             var pLuis = await _db.Personas.FirstOrDefaultAsync(p => p.Email == "luis.martinez@demo.local");
             if (pLuis is null)
             {
-                var fn = new DateTime(1987, 3, 10);
+                var fn = UtcDate(1987, 3, 10);
                 var ced = CedulaNicaraguenseValidadorHelper.BuildCedula("001", fn, 2045, 'C');
                 TelefonoNicaraguenseValidadorHelper.TryNormalizePhoneNi("2222-0000", out var tel);
                 pLuis = new Persona { Nombres = "Luis", Apellidos = "Martínez", Email = "luis.martinez@demo.local", DocumentoIdentidad = ced, FechaNacimiento = fn, Sexo = "M", NumeroTelefono = tel, Ciudad = "León" };
-                _db.Personas.Add(pLuis); await _db.SaveChangesAsync();
+                _db.Personas.Add(pLuis); await SaveChangesWithAuditAsync();
             }
 
             if (!await _db.Docentes.AnyAsync(d => d.PersonaId == pLuis.Id))
             {
                 _db.Docentes.Add(new Docente { PersonaId = pLuis.Id, GradoEstudio = "Maestría" });
-                await _db.SaveChangesAsync();
+                await SaveChangesWithAuditAsync();
             }
 
             await EnsureUserAsync("luis.martinez@demo.local", "Docente123!", "Luis Martínez", pLuis.Id, approved: true, "Direccion");
@@ -360,11 +558,11 @@ public class DataSeeder
             var pDir = await _db.Personas.FirstOrDefaultAsync(p => p.Email == "carlos.director@demo.local");
             if (pDir is null)
             {
-                var fn = new DateTime(1980, 1, 20);
+                var fn = UtcDate(1980, 1, 20);
                 var ced = CedulaNicaraguenseValidadorHelper.BuildCedula("001", fn, 3001, 'D');
                 TelefonoNicaraguenseValidadorHelper.TryNormalizePhoneNi("5789-1234", out var tel);
                 pDir = new Persona { Nombres = "Carlos", Apellidos = "Director", Email = "carlos.director@demo.local", DocumentoIdentidad = ced, FechaNacimiento = fn, Sexo = "M", NumeroTelefono = tel, Ciudad = "Managua" };
-                _db.Personas.Add(pDir); await _db.SaveChangesAsync();
+                _db.Personas.Add(pDir); await SaveChangesWithAuditAsync();
             }
 
             await EnsureUserAsync("carlos.director@demo.local", "Direccion123!", "Carlos Director", pDir.Id, approved: true, "Direccion");
@@ -389,10 +587,12 @@ public class DataSeeder
                 NumeroTelefono = telTutor,
                 Ciudad = "Masaya"
             };
-            _db.Personas.Add(pTutor); await _db.SaveChangesAsync();
+            _db.Personas.Add(pTutor); await SaveChangesWithAuditAsync();
+            _logger?.LogInformation("Created tutor persona {Email}", pTutor.Email);
 
             var tutor = new Apoderado { PersonaId = pTutor.Id, TipoParentesco = "Madre", Activo = true };
-            _db.Apoderados.Add(tutor); await _db.SaveChangesAsync();
+            _db.Apoderados.Add(tutor); await SaveChangesWithAuditAsync();
+            _logger?.LogInformation("Created apoderado (tutor) Id={ApId} for persona {PersonaId}", tutor.Id, pTutor.Id);
 
             await EnsureUserAsync("maria.tutora@demo.local", "Tutor123!", "María Juárez", pTutor.Id, approved: true, "Tutor");
 
@@ -411,25 +611,40 @@ public class DataSeeder
                 NumeroTelefono = telAlumno,
                 Ciudad = "Masaya"
             };
-            _db.Personas.Add(pAlumno); await _db.SaveChangesAsync();
+            _db.Personas.Add(pAlumno); await SaveChangesWithAuditAsync();
+            _logger?.LogInformation("Created alumno persona {Email}", pAlumno.Email);
 
             var alumno = new Alumno { PersonaId = pAlumno.Id, Activo = true };
-            _db.Alumnos.Add(alumno); await _db.SaveChangesAsync();
+            _db.Alumnos.Add(alumno); await SaveChangesWithAuditAsync();
+            _logger?.LogInformation("Created alumno Id={AlumnoId} for persona {PersonaId}", alumno.Id, pAlumno.Id);
 
             await EnsureUserAsync("diego.alumno@demo.local", "Alumno123!", "Diego Juárez", pAlumno.Id, approved: true, "Estudiante");
+            _logger?.LogInformation("Created user for alumno {Email}", "diego.alumno@demo.local");
 
-            var nd = await _db.NivelesDetalle.AsNoTracking().FirstAsync();
-            var per = await _db.Periodos.AsNoTracking().FirstAsync();
+            // Assign matricula explicitly to AnioLectivo for the demo year and to Primaria 1° A
+            var anio = await _db.AniosLectivos.AsNoTracking().FirstOrDefaultAsync(a => a.Anio == year);
+            if (anio is null) throw new InvalidOperationException($"AnioLectivo {year} debe existir antes de crear matrículas demo");
+
+            // Prefer Primaria > 1° A
+            var nd = await _db.NivelesDetalle.AsNoTracking()
+                .Include(n => n.Nivel)
+                .Include(n => n.GradoSeccion)
+                .FirstOrDefaultAsync(n => n.Nivel.DescripcionNivel == "Primaria" && n.GradoSeccion.DescripcionGrado.StartsWith("1°"));
+            if (nd is null)
+            {
+                // fallback al primer NivelDetalle disponible
+                nd = await _db.NivelesDetalle.AsNoTracking().FirstAsync();
+            }
 
             _db.Matriculas.Add(new Matricula
             {
                 AlumnoId = alumno.Id,
                 NivelDetalleId = nd.Id,
-                PeriodoId = per.Id,
+                AnioLectivoId = anio.Id,
                 ApoderadoId = tutor.Id,
                 Activo = true
             });
-            await _db.SaveChangesAsync();
+            await SaveChangesWithAuditAsync();
         }
     }
 }
